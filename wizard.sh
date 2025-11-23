@@ -3,7 +3,7 @@
 # Mac Setup Wizard
 # Interactive wizard to set up a new Mac with all configurations
 #
-# Copyright © 2024 Igor Vigasin
+# Copyright © 2025 Igor Vigasin
 # Created by Igor Vigasin
 
 set -e

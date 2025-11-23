@@ -3,7 +3,7 @@
 # Mac Setup Installation Script
 # This script sets up zsh configuration on a new Mac
 #
-# Copyright © 2024 Igor Vigasin
+# Copyright © 2025 Igor Vigasin
 # Created by Igor Vigasin
 
 set -e

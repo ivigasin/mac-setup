@@ -3,7 +3,7 @@
 # Mac Setup Dependencies Installation Script
 # Installs all required tools and dependencies
 #
-# Copyright © 2024 Igor Vigasin
+# Copyright © 2025 Igor Vigasin
 # Created by Igor Vigasin
 
 set -e

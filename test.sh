@@ -3,7 +3,7 @@
 # Installation Test Script
 # Verifies that the Mac CLI setup is correctly installed
 #
-# Copyright © 2024 Igor Vigasin
+# Copyright © 2025 Igor Vigasin
 # Created by Igor Vigasin
 
 # Don't exit on error - we want to run all tests

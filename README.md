@@ -233,6 +233,6 @@ MIT
 
 ---
 
-**Copyright © 2024 Igor Vigasin**
+**Copyright © 2025 Igor Vigasin**
 
 Created with ❤️ by Igor Vigasin

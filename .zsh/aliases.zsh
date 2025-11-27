@@ -28,5 +28,14 @@ alias mv='mv -iv'
 
 # Utilities
 alias grep='rg'
+
+# Cursor aliases
 alias ca='cursor-agent'
-alias claude="/Users/igorvigasin/.claude/local/claude"
+
+# Claude Code aliases
+alias claude="$HOME/.claude/local/claude"
+alias cc='claude'
+alias ccd='claude --directory .'
+alias cci='claude --init'
+alias ccv='claude --version'
+alias cch='claude --help'

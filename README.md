@@ -9,66 +9,67 @@ Automated setup script for configuring a new Mac with my preferred CLI tools and
 - 🔌 **Zsh plugins**: autosuggestions, syntax highlighting, history substring search, fzf
 - 🛠️ **Modern CLI tools**: eza, bat, ripgrep, fzf, zoxide
 - 📦 **Development tools**: NVM, Go, Python, Java
+- 🤖 **AI Development**: Claude Code CLI with helpful aliases and functions
 - 📁 **Modular configuration**: Split into organized files
 - ⚙️ **Git configuration**: Automatic setup with GPG signing, aliases, and color schemes
 
 ## Quick Start
 
-### 🪄 Automated Setup (Recommended)
+### 🪄 Interactive Setup (Recommended)
 
-The easiest way to set up everything is using the interactive wizard:
+The easiest way to set up everything is using the interactive installer:
 
 ```bash
 git clone <your-repo-url> ~/mac-setup
 cd ~/mac-setup
-./wizard.sh
+./setup.sh
 ```
 
-The wizard will:
+The interactive setup will:
 - ✅ Collect your Git configuration (name, email, GPG key)
 - ✅ Let you choose what to install
 - ✅ Run all installation steps automatically
 - ✅ Optionally install Node.js LTS
 - ✅ Run tests to verify everything works
 
-**That's it!** The wizard handles everything for you.
+**That's it!** The setup script handles everything for you.
 
-### Manual Setup
+### Non-Interactive Setup
 
-If you prefer to run the steps manually:
-
-#### 1. Clone this repository
+For automation or CI/CD environments:
 
 ```bash
-git clone <your-repo-url> ~/mac-setup
-cd ~/mac-setup
+# Install everything with defaults
+./setup.sh --non-interactive
+
+# Or customize with options
+./setup.sh --non-interactive --install-node --skip-tests
+
+# With environment variables
+GIT_USER_NAME="Your Name" \
+GIT_USER_EMAIL="your@email.com" \
+GIT_SIGNING_KEY="YOUR_GPG_KEY" \
+./setup.sh --non-interactive
 ```
 
-#### 2. Install zsh configuration
+**Available options:**
+- `--non-interactive` - Run without prompts
+- `--skip-zsh` - Skip zsh configuration installation
+- `--skip-deps` - Skip dependency installation
+- `--install-node` - Install Node.js LTS
+- `--skip-tests` - Skip running tests
+- `-h, --help` - Show help message
 
-```bash
-./install.sh
-```
+### What Gets Installed
 
-This will:
-- Create `~/.zsh` directory
-- Copy all configuration files
-- Install `.zshrc` (backing up existing one if present)
-
-#### 3. Install dependencies
-
-```bash
-./setup.sh
-```
-
-This will install:
-- **Homebrew** (if not installed) - Automatically detects Intel/Apple Silicon and configures PATH
-- Oh My Zsh
-- Required zsh plugins
-- CLI tools (eza, bat, ripgrep, fzf, zoxide, etc.)
-- Development tools (NVM, Go, Python, Java)
-- pipx
-- **Git configuration** - Sets up common Git settings, aliases, and prompts for user name/email if not configured
+The setup script installs:
+- **Zsh Configuration** - Modular config files in `~/.zsh/` directory
+- **Homebrew** - Automatically detects Intel/Apple Silicon Macs
+- **Oh My Zsh** with plugins (autosuggestions, syntax highlighting, etc.)
+- **CLI Tools** - eza, bat, ripgrep, fzf, zoxide, fd, neovim
+- **Development Tools** - NVM, Go, Python 3.11, Java, pipx
+- **Claude Code CLI** - AI-powered coding assistant
+- **Git Configuration** - Aliases, colors, GPG signing, and credentials
 
 **Note:** Homebrew installation is fully automated and handles:
 - ✅ Automatic detection of Intel vs Apple Silicon Macs
@@ -76,33 +77,27 @@ This will install:
 - ✅ Error handling and verification
 - ✅ Automatic updates after installation
 
-#### 4. Test the installation
+### Testing
+
+Verify your installation:
 
 ```bash
 ./test.sh
 ```
 
-This will verify that:
+This checks:
 - All configuration files are in place
 - Required tools are installed
 - Zsh configuration loads correctly
 - Aliases and functions are defined
 
-#### 5. Restart your terminal
+### Restart Your Terminal
 
 ```bash
 source ~/.zshrc
 ```
 
 Or simply open a new terminal window.
-
-## Manual Installation
-
-If you prefer to install manually:
-
-1. Copy `.zsh` directory to `~/.zsh`
-2. Copy `.zshrc` to `~/.zshrc`
-3. Install dependencies manually (see `setup.sh` for reference)
 
 ## Configuration Structure
 
@@ -133,6 +128,7 @@ If you prefer to install manually:
 - **Python 3.11** - Python interpreter
 - **OpenJDK** - Java Development Kit
 - **pipx** - Python application installer
+- **Claude Code CLI** - AI-powered coding assistant with helpful shell functions
 
 ### Git Configuration
 The setup script automatically configures Git with:
@@ -154,6 +150,39 @@ The setup script automatically configures Git with:
 - **zsh-syntax-highlighting** - Syntax highlighting for commands
 - **history-substring-search** - Search history with substring matching
 - **fzf** - Fuzzy finder integration
+
+### Claude Code Helpers
+
+The setup includes several helpful aliases and functions for working with Claude Code:
+
+**Aliases:**
+- `cc` - Short alias for `claude`
+- `ccd` - Run Claude Code in current directory
+- `cci` - Initialize Claude Code
+- `ccv` - Show version
+- `cch` - Show help
+
+**Functions:**
+- `ccstart [message]` - Initialize and start Claude Code with optional message
+- `ccfile <file> [message]` - Run Claude Code with specific file context
+- `ccgit [message]` - Run Claude Code in git repository context
+- `ccask <question>` - Quick Claude Code question
+- `ccnew <project-name>` - Create new project with Claude Code initialized
+
+**Examples:**
+```bash
+# Quick start in current project
+ccstart "help me refactor this code"
+
+# Ask Claude about a specific file
+ccfile src/main.js "explain this code"
+
+# Review git changes
+ccgit "create a PR description"
+
+# Create new project
+ccnew my-awesome-project
+```
 
 ## Customization
 
@@ -190,8 +219,14 @@ To update your configuration from the repository:
 ```bash
 cd ~/mac-setup
 git pull
-./install.sh
+./setup.sh --non-interactive --skip-deps  # Update config files only
 ./test.sh  # Verify the update
+```
+
+Or run the full interactive setup to update everything:
+
+```bash
+./setup.sh
 ```
 
 ## Testing

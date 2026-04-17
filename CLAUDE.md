@@ -33,7 +33,7 @@ The repository uses a single all-in-one script that handles everything:
    - Uses environment variables for configuration
    - Runs with default settings or command-line flags
    - Ideal for automation and CI/CD
-   - Accepts: GIT_USER_NAME, GIT_USER_EMAIL, GIT_SIGNING_KEY
+   - Accepts: GIT_USER_NAME, GIT_USER_EMAIL, GIT_USER_SIGNING_KEY
 
 ### Legacy Scripts
 
@@ -115,7 +115,7 @@ The setup.sh script automatically configures Git with:
 - Comprehensive color settings
 - Extensive aliases (st, ci, co, br, df, dc, lg, lp, lol, lola, grog, who, undo, unlock)
 
-Git configuration accepts environment variables (GIT_USER_NAME, GIT_USER_EMAIL, GIT_SIGNING_KEY) in non-interactive mode, or prompts interactively if not set.
+Git configuration accepts environment variables (GIT_USER_NAME, GIT_USER_EMAIL, GIT_USER_SIGNING_KEY) in non-interactive mode, or prompts interactively if not set.
 
 ## Homebrew Installation
 
@@ -149,7 +149,7 @@ The setup.sh script is organized into distinct sections:
 
 ### Git Configuration Flow
 The configure_git() function:
-1. Checks for environment variables (GIT_NAME, GIT_EMAIL, GIT_SIGNING_KEY)
+1. Checks for environment variables (GIT_USER_NAME, GIT_USER_EMAIL, GIT_USER_SIGNING_KEY)
 2. Falls back to existing git config values
 3. Prompts user if values are missing (only in interactive mode)
 4. Always configures color settings and aliases

@@ -33,7 +33,7 @@ alias grep='rg'
 alias ca='cursor-agent'
 
 # Claude Code aliases
-alias claude="$HOME/.claude/local/claude"
+alias claude="/opt/homebrew/bin/claude"
 alias cc='claude'
 alias ccd='claude --directory .'
 alias cci='claude --init'

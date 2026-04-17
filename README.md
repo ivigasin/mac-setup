@@ -48,7 +48,7 @@ For automation or CI/CD environments:
 # With environment variables
 GIT_USER_NAME="Your Name" \
 GIT_USER_EMAIL="your@email.com" \
-GIT_SIGNING_KEY="YOUR_GPG_KEY" \
+GIT_USER_SIGNING_KEY="YOUR_GPG_KEY" \
 ./setup.sh --non-interactive
 ```
 

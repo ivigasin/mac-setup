@@ -147,6 +147,11 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} fzf (fuzzy finder integration)"
         echo ""
 
+        echo -e "${CYAN}🔤 Fonts:${NC}"
+        echo -e "  ${GREEN}✓${NC} MesloLGS NF (required for Agnoster theme)"
+        echo -e "  ${GREEN}✓${NC} Hack Nerd Font"
+        echo ""
+
         echo -e "${CYAN}🛠️  CLI Tools (via Homebrew):${NC}"
         echo -e "  ${GREEN}✓${NC} eza (modern ls replacement)"
         echo -e "  ${GREEN}✓${NC} bat (modern cat replacement)"
@@ -155,6 +160,8 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} zoxide (smart cd)"
         echo -e "  ${GREEN}✓${NC} fd (fast find)"
         echo -e "  ${GREEN}✓${NC} neovim (modern vim editor)"
+        echo -e "  ${GREEN}✓${NC} gnupg (GPG for commit signing)"
+        echo -e "  ${GREEN}✓${NC} pinentry-mac (GPG passphrase prompts)"
         echo ""
 
         echo -e "${CYAN}💻 Development Tools:${NC}"
@@ -163,7 +170,7 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} Python 3.11"
         echo -e "  ${GREEN}✓${NC} OpenJDK (Java Development Kit)"
         echo -e "  ${GREEN}✓${NC} pipx (Python application installer)"
-        echo -e "  ${GREEN}✓${NC} Claude Code CLI"
+        echo -e "  ${GREEN}✓${NC} Claude Code CLI (install + browser auth)"
         echo ""
 
         echo -e "${CYAN}⚙️  Git Configuration:${NC}"
@@ -313,7 +320,8 @@ install_zsh_plugins() {
         echo "  Installing zsh-autosuggestions..."
         git clone https://github.com/zsh-users/zsh-autosuggestions "$plugins_dir/zsh-autosuggestions"
     else
-        echo -e "  ${GREEN}✅ zsh-autosuggestions already installed${NC}"
+        echo -e "  ${GREEN}✅ zsh-autosuggestions already installed, updating...${NC}"
+        git -C "$plugins_dir/zsh-autosuggestions" pull --quiet || true
     fi
 
     # zsh-syntax-highlighting
@@ -321,7 +329,8 @@ install_zsh_plugins() {
         echo "  Installing zsh-syntax-highlighting..."
         git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$plugins_dir/zsh-syntax-highlighting"
     else
-        echo -e "  ${GREEN}✅ zsh-syntax-highlighting already installed${NC}"
+        echo -e "  ${GREEN}✅ zsh-syntax-highlighting already installed, updating...${NC}"
+        git -C "$plugins_dir/zsh-syntax-highlighting" pull --quiet || true
     fi
 
     # history-substring-search
@@ -329,7 +338,8 @@ install_zsh_plugins() {
         echo "  Installing history-substring-search..."
         git clone https://github.com/zsh-users/zsh-history-substring-search "$plugins_dir/zsh-history-substring-search"
     else
-        echo -e "  ${GREEN}✅ history-substring-search already installed${NC}"
+        echo -e "  ${GREEN}✅ history-substring-search already installed, updating...${NC}"
+        git -C "$plugins_dir/zsh-history-substring-search" pull --quiet || true
     fi
 
     echo -e "${GREEN}✅ Zsh plugins installed${NC}"
@@ -349,6 +359,8 @@ install_brew_packages() {
         "go"            # Go programming language
         "python@3.11"   # Python
         "openjdk"       # Java
+        "gnupg"         # GPG for commit signing
+        "pinentry-mac"  # macOS pinentry for GPG passphrase prompts
     )
 
     for package in "${packages[@]}"; do
@@ -366,7 +378,7 @@ install_brew_packages() {
 install_nvm() {
     if [ ! -d "$HOME/.nvm" ]; then
         echo -e "${YELLOW}📦 Installing NVM (Node Version Manager)...${NC}"
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 
         # Source NVM for current session
         export NVM_DIR="$HOME/.nvm"
@@ -378,11 +390,102 @@ install_nvm() {
     fi
 }
 
+configure_iterm2() {
+    echo -e "${YELLOW}🖥️  Configuring iTerm2...${NC}"
+
+    local profiles_dir="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
+    local plist="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
+    local font="MesloLGS-NF-Regular 13"
+    mkdir -p "$profiles_dir"
+
+    # Write dynamic profile with correct PostScript font name
+    cat > "$profiles_dir/mac-setup-profile.json" <<EOF
+{
+  "Profiles": [
+    {
+      "Name": "mac-setup",
+      "Guid": "mac-setup-nerd-font-profile",
+      "Normal Font": "$font",
+      "Non Ascii Font": "$font",
+      "Use Non-ASCII Font": false,
+      "Horizontal Spacing": 1,
+      "Vertical Spacing": 1
+    }
+  ]
+}
+EOF
+    echo -e "  ${GREEN}✅ iTerm2 dynamic profile written (font: $font)${NC}"
+
+    # Quit iTerm2 so plist changes aren't overwritten when it exits
+    if pgrep -x "iTerm2" > /dev/null; then
+        echo -e "  ${YELLOW}🔄 Quitting iTerm2 to apply font changes...${NC}"
+        osascript -e 'tell application "iTerm2" to quit' 2>/dev/null || true
+        sleep 2
+    fi
+
+    # Fix every profile in the plist that has a wrong/missing Nerd Font
+    if [ -f "$plist" ]; then
+        python3 - "$plist" "$font" <<'PYEOF'
+import sys, plistlib, shutil, os
+
+plist_path, font = sys.argv[1], sys.argv[2]
+shutil.copy2(plist_path, plist_path + '.bak')
+
+with open(plist_path, 'rb') as f:
+    prefs = plistlib.load(f)
+
+nerd_font_markers = ['NF', 'Nerd', 'Powerline', 'HackNFM', 'MesloLGS']
+
+for profile in prefs.get('New Bookmarks', []):
+    current = profile.get('Normal Font', '')
+    # Replace any profile using a font whose name doesn't contain a Nerd Font marker
+    if not any(m in current for m in nerd_font_markers):
+        profile['Normal Font'] = font
+        print(f"  Fixed profile '{profile.get('Name')}': '{current}' → '{font}'")
+    else:
+        print(f"  OK profile '{profile.get('Name')}': {current}")
+
+with open(plist_path, 'wb') as f:
+    plistlib.dump(prefs, f, fmt=plistlib.FMT_BINARY)
+PYEOF
+        echo -e "  ${GREEN}✅ iTerm2 plist fonts patched${NC}"
+    fi
+
+    # Set mac-setup as the default profile
+    defaults write com.googlecode.iterm2 "Default Bookmark Guid" -string "mac-setup-nerd-font-profile"
+    echo -e "  ${GREEN}✅ mac-setup set as default iTerm2 profile${NC}"
+
+    # Relaunch iTerm2
+    echo -e "  ${YELLOW}🚀 Relaunching iTerm2...${NC}"
+    open -a iTerm
+    echo -e "  ${GREEN}✅ iTerm2 relaunched — open a new window to see the updated font${NC}"
+}
+
+install_fonts() {
+    echo -e "${YELLOW}🔤 Installing Nerd Fonts...${NC}"
+
+    local fonts=(
+        "font-meslo-lg-nerd-font"   # Required for Agnoster theme
+        "font-hack-nerd-font"       # Popular programming font
+    )
+
+    for font in "${fonts[@]}"; do
+        if brew list --cask "$font" &>/dev/null; then
+            echo -e "  ${GREEN}✅ $font already installed${NC}"
+        else
+            echo "  Installing $font..."
+            brew install --cask "$font" || echo -e "  ${RED}⚠️  Failed to install $font${NC}"
+        fi
+    done
+
+    echo -e "${GREEN}✅ Nerd Fonts installed${NC}"
+}
+
 install_pipx() {
     if ! command_exists pipx; then
         echo -e "${YELLOW}📦 Installing pipx...${NC}"
-        python3 -m pip install --user pipx
-        python3 -m pipx ensurepath
+        brew install pipx
+        pipx ensurepath
         echo -e "${GREEN}✅ pipx installed${NC}"
     else
         echo -e "${GREEN}✅ pipx already installed${NC}"
@@ -402,24 +505,55 @@ setup_fzf() {
 install_claude_code() {
     echo -e "${YELLOW}📦 Installing Claude Code CLI...${NC}"
 
+    # Claude Code requires Node.js — source NVM and install LTS if needed
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    if ! command_exists node; then
+        echo -e "${YELLOW}   Node.js not found. Installing LTS via NVM...${NC}"
+        if command_exists nvm; then
+            nvm install --lts
+            nvm use --lts
+        else
+            echo -e "${RED}❌ NVM not available. Cannot install Node.js — skipping Claude Code.${NC}"
+            return
+        fi
+    fi
+
     if command_exists claude; then
         echo -e "${GREEN}✅ Claude Code CLI already installed${NC}"
         claude --version
+    else
+        echo -e "${YELLOW}   Installing Claude Code via npm...${NC}"
+        if npm install -g @anthropic-ai/claude-code; then
+            echo -e "${GREEN}✅ Claude Code CLI installed successfully${NC}"
+            claude --version
+        else
+            echo -e "${YELLOW}⚠️  Failed to install Claude Code CLI${NC}"
+            return
+        fi
+    fi
+
+    authenticate_claude_code
+}
+
+authenticate_claude_code() {
+    echo -e "${YELLOW}🔑 Authenticating Claude Code...${NC}"
+
+    # Already authenticated if session file exists
+    if [ -f "$HOME/.claude/.credentials.json" ] || [ -f "$HOME/.claude/auth.json" ]; then
+        echo -e "${GREEN}✅ Claude Code already authenticated${NC}"
         return
     fi
 
-    # Install Claude Code CLI
-    echo "  Downloading and installing Claude Code..."
-    if curl -fsSL https://raw.githubusercontent.com/anthropics/claude-code/main/install.sh | bash; then
-        echo -e "${GREEN}✅ Claude Code CLI installed successfully${NC}"
-
-        # Verify installation
-        if [ -f "$HOME/.claude/local/claude" ]; then
-            echo -e "${GREEN}   Claude Code available at: $HOME/.claude/local/claude${NC}"
-        fi
+    if [ "$INTERACTIVE_MODE" = true ]; then
+        echo -e "${BLUE}   Starting browser-based authentication...${NC}"
+        claude auth login
+    elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+        echo -e "${GREEN}✅ ANTHROPIC_API_KEY is set — Claude Code will use it automatically${NC}"
     else
-        echo -e "${YELLOW}⚠️  Failed to install Claude Code CLI${NC}"
-        echo -e "${YELLOW}   You can install it manually from: https://github.com/anthropics/claude-code${NC}"
+        echo -e "${YELLOW}⚠️  No authentication configured.${NC}"
+        echo -e "${YELLOW}   Run 'claude auth login' after setup, or set ANTHROPIC_API_KEY.${NC}"
     fi
 }
 
@@ -670,9 +804,10 @@ parse_arguments() {
                 echo "  -h, --help          Show this help message"
                 echo ""
                 echo "Environment Variables:"
-                echo "  GIT_USER_NAME       Set Git user name"
-                echo "  GIT_USER_EMAIL      Set Git user email"
-                echo "  GIT_SIGNING_KEY     Set GPG signing key"
+                echo "  GIT_USER_NAME        Set Git user name"
+                echo "  GIT_USER_EMAIL       Set Git user email"
+                echo "  GIT_USER_SIGNING_KEY Set GPG signing key"
+                echo "  ANTHROPIC_API_KEY    Authenticate Claude Code (skips browser auth)"
                 echo ""
                 echo "Examples:"
                 echo "  $0                                    # Interactive mode (recommended)"
@@ -725,7 +860,7 @@ main() {
         # Use environment variables in non-interactive mode
         GIT_NAME="${GIT_USER_NAME:-}"
         GIT_EMAIL="${GIT_USER_EMAIL:-}"
-        GIT_SIGNING_KEY="${GIT_SIGNING_KEY:-}"
+        GIT_SIGNING_KEY="${GIT_USER_SIGNING_KEY:-}"
 
         show_installation_summary "$INSTALL_ZSH_CONFIG" "$INSTALL_DEPENDENCIES"
     fi
@@ -736,57 +871,69 @@ main() {
     echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
     echo ""
 
-    # Step 1: Install zsh configuration
+    # Step 1-2: Install shell framework first so our config overwrites it
+    if [[ "$INSTALL_DEPENDENCIES" == "y" ]] || [[ "$INSTALL_DEPENDENCIES" == "true" ]]; then
+        echo -e "${BOLD}${BLUE}Step 1: Installing Homebrew${NC}"
+        echo ""
+        install_homebrew
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 2: Installing Oh My Zsh${NC}"
+        echo ""
+        install_oh_my_zsh
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 3: Installing Zsh Plugins${NC}"
+        echo ""
+        install_zsh_plugins
+        echo ""
+    fi
+
+    # Step 4: Install zsh configuration (after Oh My Zsh so our .zshrc wins)
     if [[ "$INSTALL_ZSH_CONFIG" == "y" ]] || [[ "$INSTALL_ZSH_CONFIG" == "true" ]]; then
-        echo -e "${BOLD}${BLUE}Step 1: Installing Zsh Configuration${NC}"
+        echo -e "${BOLD}${BLUE}Step 4: Installing Zsh Configuration${NC}"
         echo ""
         install_zsh_configuration
         echo ""
     fi
 
-    # Step 2-9: Install dependencies
     if [[ "$INSTALL_DEPENDENCIES" == "y" ]] || [[ "$INSTALL_DEPENDENCIES" == "true" ]]; then
-        echo -e "${BOLD}${BLUE}Step 2: Installing Homebrew${NC}"
-        echo ""
-        install_homebrew
-        echo ""
-
-        echo -e "${BOLD}${BLUE}Step 3: Installing Oh My Zsh${NC}"
-        echo ""
-        install_oh_my_zsh
-        echo ""
-
-        echo -e "${BOLD}${BLUE}Step 4: Installing Zsh Plugins${NC}"
-        echo ""
-        install_zsh_plugins
-        echo ""
-
         echo -e "${BOLD}${BLUE}Step 5: Installing Homebrew Packages${NC}"
         echo ""
         install_brew_packages
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 6: Installing NVM${NC}"
+        echo -e "${BOLD}${BLUE}Step 6: Installing Fonts${NC}"
+        echo ""
+        install_fonts
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 6b: Configuring iTerm2${NC}"
+        echo ""
+        configure_iterm2
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 7: Installing NVM${NC}"
         echo ""
         install_nvm
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 7: Installing pipx${NC}"
+        echo -e "${BOLD}${BLUE}Step 8: Installing pipx${NC}"
         echo ""
         install_pipx
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 8: Setting up FZF${NC}"
+        echo -e "${BOLD}${BLUE}Step 9: Setting up FZF${NC}"
         echo ""
         setup_fzf
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 9: Installing Claude Code CLI${NC}"
+        echo -e "${BOLD}${BLUE}Step 10: Installing Claude Code CLI${NC}"
         echo ""
         install_claude_code
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 10: Configuring Git${NC}"
+        echo -e "${BOLD}${BLUE}Step 11: Configuring Git${NC}"
         echo ""
         configure_git
         echo ""
@@ -822,6 +969,17 @@ main() {
         echo ""
     fi
 
+    # Reload zsh configuration
+    echo -e "${BOLD}${BLUE}Reloading Zsh Configuration...${NC}"
+    echo ""
+    if [ -f "$HOME/.zshrc" ]; then
+        # shellcheck disable=SC1091
+        source "$HOME/.zshrc" 2>/dev/null && \
+            echo -e "${GREEN}✅ ~/.zshrc reloaded${NC}" || \
+            echo -e "${YELLOW}⚠️  ~/.zshrc reload had warnings (this is usually okay in non-zsh shells)${NC}"
+    fi
+    echo ""
+
     # Final summary
     echo ""
     echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
@@ -829,7 +987,7 @@ main() {
     echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     echo -e "${CYAN}Next steps:${NC}"
-    echo -e "  1. Restart your terminal or run: ${YELLOW}source ~/.zshrc${NC}"
+    echo -e "  1. Open a new iTerm2 window to see the updated font"
     if [[ "$INSTALL_NODE_LTS" != "y" ]] && [[ "$INSTALL_NODE_LTS" != "true" ]] && [[ "$INSTALL_DEPENDENCIES" == "y" || "$INSTALL_DEPENDENCIES" == "true" ]]; then
         echo -e "  2. Install Node.js LTS: ${YELLOW}nvm install --lts${NC}"
     fi

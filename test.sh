@@ -147,6 +147,10 @@ run_test "fzf installed"    false command_exists fzf
 run_test "zoxide installed" false command_exists zoxide
 run_test "fd installed"     false command_exists fd
 run_test "neovim installed" false command_exists nvim
+run_test "gh installed"     false command_exists gh
+run_test "iTerm2 installed" false bash -c "[ -d /Applications/iTerm.app ] || brew list --cask iterm2 >/dev/null 2>&1"
+run_test "kitty installed"  false bash -c "[ -d /Applications/kitty.app ] || brew list --cask kitty >/dev/null 2>&1"
+run_test "kitty.conf installed" false file_exists "$HOME/.config/kitty/kitty.conf"
 
 if command_exists bat; then
     run_test "bat --version succeeds" false bash -c "bat --version >/dev/null"

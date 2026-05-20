@@ -7,8 +7,9 @@ Automated setup script for configuring a new Mac with my preferred CLI tools and
 - 🪄 **Interactive Wizard** - One-command setup with guided configuration
 - 🎨 **Oh My Zsh** with Agnoster theme
 - 🔌 **Zsh plugins**: autosuggestions, syntax highlighting, history substring search, fzf
-- 🛠️ **Modern CLI tools**: eza, bat, ripgrep, fzf, zoxide
+- 🛠️ **Modern CLI tools**: eza, bat, ripgrep, fzf, zoxide, gh
 - 📦 **Development tools**: NVM, Go, Python, Java
+- 🖥️ **Terminals**: iTerm2 with Nerd Font, kitty with iTerm2-style keybindings
 - 🤖 **AI Development**: Claude Code CLI with helpful aliases and functions
 - 📁 **Modular configuration**: Split into organized files
 - ⚙️ **Git configuration**: Automatic setup with GPG signing, aliases, and color schemes
@@ -66,8 +67,11 @@ The setup script installs:
 - **Zsh Configuration** - Modular config files in `~/.zsh/` directory
 - **Homebrew** - Automatically detects Intel/Apple Silicon Macs
 - **Oh My Zsh** with plugins (autosuggestions, syntax highlighting, etc.)
-- **CLI Tools** - eza, bat, ripgrep, fzf, zoxide, fd, neovim
+- **CLI Tools** - eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh
 - **Development Tools** - NVM, Go, Python 3.11, Java, pipx
+- **iTerm2** - Installed and configured with Nerd Font (MesloLGS NF)
+- **kitty** - Installed with iTerm2-style keybindings (`~/.config/kitty/kitty.conf`)
+- **Nerd Fonts** - font-meslo-lg-nerd-font, font-hack-nerd-font
 - **Claude Code CLI** - AI-powered coding assistant
 - **Git Configuration** - Aliases, colors, GPG signing, and credentials
 
@@ -121,6 +125,11 @@ Or simply open a new terminal window.
 - **fzf** - Fuzzy finder
 - **zoxide** - Smart `cd` command
 - **fd** - Fast find replacement
+- **gh** - GitHub CLI for PRs, issues, and repo operations
+
+### Terminal Emulators
+- **iTerm2** - Installed and configured with MesloLGS NF font; dynamic profile `mac-setup` set as default
+- **kitty** - Installed with a custom `kitty.conf` that mirrors iTerm2 keybindings (Cmd+T tabs, Cmd+D splits, Cmd+Opt+Arrow navigation, etc.). Config lives at `~/.config/kitty/kitty.conf`; reload with `Cmd+,`.
 
 ### Development Tools
 - **NVM** - Node Version Manager

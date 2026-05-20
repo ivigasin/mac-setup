@@ -152,6 +152,11 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} Hack Nerd Font"
         echo ""
 
+        echo -e "${CYAN}🖥️  Terminal Emulators:${NC}"
+        echo -e "  ${GREEN}✓${NC} iTerm2 (installed + configured with Nerd Font)"
+        echo -e "  ${GREEN}✓${NC} kitty (installed + iTerm2-style keybindings)"
+        echo ""
+
         echo -e "${CYAN}🛠️  CLI Tools (via Homebrew):${NC}"
         echo -e "  ${GREEN}✓${NC} eza (modern ls replacement)"
         echo -e "  ${GREEN}✓${NC} bat (modern cat replacement)"
@@ -162,6 +167,7 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} neovim (modern vim editor)"
         echo -e "  ${GREEN}✓${NC} gnupg (GPG for commit signing)"
         echo -e "  ${GREEN}✓${NC} pinentry-mac (GPG passphrase prompts)"
+        echo -e "  ${GREEN}✓${NC} gh (GitHub CLI)"
         echo ""
 
         echo -e "${CYAN}💻 Development Tools:${NC}"
@@ -361,6 +367,7 @@ install_brew_packages() {
         "openjdk"       # Java
         "gnupg"         # GPG for commit signing
         "pinentry-mac"  # macOS pinentry for GPG passphrase prompts
+        "gh"            # GitHub CLI
     )
 
     for package in "${packages[@]}"; do
@@ -479,6 +486,60 @@ install_fonts() {
     done
 
     echo -e "${GREEN}✅ Nerd Fonts installed${NC}"
+}
+
+install_iterm2() {
+    echo -e "${YELLOW}🖥️  Installing iTerm2...${NC}"
+
+    if brew list --cask iterm2 &>/dev/null; then
+        echo -e "  ${GREEN}✅ iterm2 already installed${NC}"
+    else
+        echo "  Installing iterm2..."
+        brew install --cask iterm2 || echo -e "  ${RED}⚠️  Failed to install iterm2${NC}"
+    fi
+
+    echo -e "${GREEN}✅ iTerm2 installed${NC}"
+}
+
+install_kitty() {
+    echo -e "${YELLOW}🐱 Installing kitty terminal...${NC}"
+
+    # kitty may already be installed manually under /Applications without
+    # being tracked by Homebrew — only install the cask if neither is present.
+    if brew list --cask kitty &>/dev/null; then
+        echo -e "  ${GREEN}✅ kitty already installed (via Homebrew)${NC}"
+    elif [ -d "/Applications/kitty.app" ]; then
+        echo -e "  ${GREEN}✅ kitty already installed (under /Applications)${NC}"
+    else
+        echo "  Installing kitty..."
+        brew install --cask kitty || echo -e "  ${RED}⚠️  Failed to install kitty${NC}"
+    fi
+
+    echo -e "${GREEN}✅ kitty installed${NC}"
+}
+
+install_kitty_config() {
+    echo -e "${YELLOW}🐱 Installing kitty configuration...${NC}"
+
+    local src="$SCRIPT_DIR/.config/kitty/kitty.conf"
+    local dest_dir="$HOME_DIR/.config/kitty"
+    local dest="$dest_dir/kitty.conf"
+
+    if [ ! -f "$src" ]; then
+        echo -e "  ${RED}⚠️  kitty.conf not found at $src — skipping${NC}"
+        return 0
+    fi
+
+    mkdir -p "$dest_dir"
+
+    if [ -f "$dest" ] && ! cmp -s "$src" "$dest"; then
+        echo -e "  ${YELLOW}💾 Backing up existing kitty.conf to kitty.conf.backup${NC}"
+        cp "$dest" "$dest.backup"
+    fi
+
+    cp "$src" "$dest"
+    echo -e "  ${GREEN}✅ kitty.conf installed to $dest${NC}"
+    echo -e "  ${CYAN}💡 Reload in kitty with Cmd+, (or restart kitty)${NC}"
 }
 
 install_pipx() {
@@ -908,9 +969,24 @@ main() {
         install_fonts
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 6b: Configuring iTerm2${NC}"
+        echo -e "${BOLD}${BLUE}Step 6b: Installing iTerm2${NC}"
+        echo ""
+        install_iterm2
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 6c: Configuring iTerm2${NC}"
         echo ""
         configure_iterm2
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 6d: Installing kitty terminal${NC}"
+        echo ""
+        install_kitty
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 6e: Installing kitty configuration${NC}"
+        echo ""
+        install_kitty_config
         echo ""
 
         echo -e "${BOLD}${BLUE}Step 7: Installing NVM${NC}"

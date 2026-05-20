@@ -15,8 +15,10 @@ The repository uses a single all-in-one script that handles everything:
 - Installs zsh configuration files (from inline functions)
 - Installs Homebrew (handles both Intel and Apple Silicon)
 - Installs Oh My Zsh and plugins
-- Installs CLI tools via Homebrew (eza, bat, ripgrep, fzf, zoxide, fd, neovim)
+- Installs CLI tools via Homebrew (eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh)
 - Installs development tools (NVM, Go, Python, Java, pipx, Claude Code CLI)
+- Installs and configures iTerm2 (Nerd Font, default profile)
+- Installs kitty terminal and copies `.config/kitty/kitty.conf` (iTerm2-style keybindings)
 - Configures Git with aliases, colors, GPG signing
 - Sets up FZF key bindings
 - Optionally installs Node.js LTS and runs tests
@@ -224,7 +226,9 @@ Quick shortcuts for common Claude Code operations:
 ## Default Tool Versions
 
 - Python: 3.11
-- NVM: v0.39.0
+- NVM: v0.40.3
 - Theme: Agnoster
 - Editor: neovim
 - Bat theme: Dracula
+- iTerm2 font: MesloLGS-NF-Regular 13
+- kitty config: `.config/kitty/kitty.conf` — splits/stack layout, powerline tabs, iTerm2-style Cmd bindings

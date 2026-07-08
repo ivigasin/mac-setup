@@ -153,8 +153,7 @@ show_installation_summary() {
         echo ""
 
         echo -e "${CYAN}🖥️  Terminal Emulators:${NC}"
-        echo -e "  ${GREEN}✓${NC} iTerm2 (installed + configured with Nerd Font)"
-        echo -e "  ${GREEN}✓${NC} kitty (installed + iTerm2-style keybindings)"
+        echo -e "  ${GREEN}✓${NC} Ghostty (installed + Nerd Font + iTerm2-style keybindings)"
         echo ""
 
         echo -e "${CYAN}🛠️  CLI Tools (via Homebrew):${NC}"
@@ -165,9 +164,11 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} zoxide (smart cd)"
         echo -e "  ${GREEN}✓${NC} fd (fast find)"
         echo -e "  ${GREEN}✓${NC} neovim (modern vim editor)"
+        echo -e "  ${GREEN}✓${NC} mc (Midnight Commander file manager)"
         echo -e "  ${GREEN}✓${NC} gnupg (GPG for commit signing)"
         echo -e "  ${GREEN}✓${NC} pinentry-mac (GPG passphrase prompts)"
         echo -e "  ${GREEN}✓${NC} gh (GitHub CLI)"
+        echo -e "  ${GREEN}✓${NC} git-secrets (prevent committing secrets)"
         echo ""
 
         echo -e "${CYAN}💻 Development Tools:${NC}"
@@ -362,12 +363,14 @@ install_brew_packages() {
         "zoxide"        # Smart cd
         "fd"            # Better find (used by fzf)
         "neovim"        # Modern vim editor
+        "mc"            # Midnight Commander (file manager)
         "go"            # Go programming language
         "python@3.11"   # Python
         "openjdk"       # Java
         "gnupg"         # GPG for commit signing
         "pinentry-mac"  # macOS pinentry for GPG passphrase prompts
         "gh"            # GitHub CLI
+        "git-secrets"   # Prevent committing secrets/credentials
     )
 
     for package in "${packages[@]}"; do
@@ -397,75 +400,28 @@ install_nvm() {
     fi
 }
 
-configure_iterm2() {
-    echo -e "${YELLOW}🖥️  Configuring iTerm2...${NC}"
+install_ghostty_config() {
+    echo -e "${YELLOW}👻 Installing Ghostty configuration...${NC}"
 
-    local profiles_dir="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
-    local plist="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
-    local font="MesloLGS-NF-Regular 13"
-    mkdir -p "$profiles_dir"
+    local src="$SCRIPT_DIR/.config/ghostty/config"
+    local dest_dir="$HOME_DIR/.config/ghostty"
+    local dest="$dest_dir/config"
 
-    # Write dynamic profile with correct PostScript font name
-    cat > "$profiles_dir/mac-setup-profile.json" <<EOF
-{
-  "Profiles": [
-    {
-      "Name": "mac-setup",
-      "Guid": "mac-setup-nerd-font-profile",
-      "Normal Font": "$font",
-      "Non Ascii Font": "$font",
-      "Use Non-ASCII Font": false,
-      "Horizontal Spacing": 1,
-      "Vertical Spacing": 1
-    }
-  ]
-}
-EOF
-    echo -e "  ${GREEN}✅ iTerm2 dynamic profile written (font: $font)${NC}"
-
-    # Quit iTerm2 so plist changes aren't overwritten when it exits
-    if pgrep -x "iTerm2" > /dev/null; then
-        echo -e "  ${YELLOW}🔄 Quitting iTerm2 to apply font changes...${NC}"
-        osascript -e 'tell application "iTerm2" to quit' 2>/dev/null || true
-        sleep 2
+    if [ ! -f "$src" ]; then
+        echo -e "  ${RED}⚠️  ghostty config not found at $src — skipping${NC}"
+        return 0
     fi
 
-    # Fix every profile in the plist that has a wrong/missing Nerd Font
-    if [ -f "$plist" ]; then
-        python3 - "$plist" "$font" <<'PYEOF'
-import sys, plistlib, shutil, os
+    mkdir -p "$dest_dir"
 
-plist_path, font = sys.argv[1], sys.argv[2]
-shutil.copy2(plist_path, plist_path + '.bak')
-
-with open(plist_path, 'rb') as f:
-    prefs = plistlib.load(f)
-
-nerd_font_markers = ['NF', 'Nerd', 'Powerline', 'HackNFM', 'MesloLGS']
-
-for profile in prefs.get('New Bookmarks', []):
-    current = profile.get('Normal Font', '')
-    # Replace any profile using a font whose name doesn't contain a Nerd Font marker
-    if not any(m in current for m in nerd_font_markers):
-        profile['Normal Font'] = font
-        print(f"  Fixed profile '{profile.get('Name')}': '{current}' → '{font}'")
-    else:
-        print(f"  OK profile '{profile.get('Name')}': {current}")
-
-with open(plist_path, 'wb') as f:
-    plistlib.dump(prefs, f, fmt=plistlib.FMT_BINARY)
-PYEOF
-        echo -e "  ${GREEN}✅ iTerm2 plist fonts patched${NC}"
+    if [ -f "$dest" ] && ! cmp -s "$src" "$dest"; then
+        echo -e "  ${YELLOW}💾 Backing up existing config to config.backup${NC}"
+        cp "$dest" "$dest.backup"
     fi
 
-    # Set mac-setup as the default profile
-    defaults write com.googlecode.iterm2 "Default Bookmark Guid" -string "mac-setup-nerd-font-profile"
-    echo -e "  ${GREEN}✅ mac-setup set as default iTerm2 profile${NC}"
-
-    # Relaunch iTerm2
-    echo -e "  ${YELLOW}🚀 Relaunching iTerm2...${NC}"
-    open -a iTerm
-    echo -e "  ${GREEN}✅ iTerm2 relaunched — open a new window to see the updated font${NC}"
+    cp "$src" "$dest"
+    echo -e "  ${GREEN}✅ Ghostty config installed to $dest${NC}"
+    echo -e "  ${CYAN}💡 Reload in Ghostty with Cmd+Shift+, (or restart Ghostty)${NC}"
 }
 
 install_fonts() {
@@ -488,58 +444,19 @@ install_fonts() {
     echo -e "${GREEN}✅ Nerd Fonts installed${NC}"
 }
 
-install_iterm2() {
-    echo -e "${YELLOW}🖥️  Installing iTerm2...${NC}"
+install_ghostty() {
+    echo -e "${YELLOW}👻 Installing Ghostty...${NC}"
 
-    if brew list --cask iterm2 &>/dev/null; then
-        echo -e "  ${GREEN}✅ iterm2 already installed${NC}"
+    if brew list --cask ghostty &>/dev/null; then
+        echo -e "  ${GREEN}✅ ghostty already installed (via Homebrew)${NC}"
+    elif [ -d "/Applications/Ghostty.app" ]; then
+        echo -e "  ${GREEN}✅ ghostty already installed (under /Applications)${NC}"
     else
-        echo "  Installing iterm2..."
-        brew install --cask iterm2 || echo -e "  ${RED}⚠️  Failed to install iterm2${NC}"
+        echo "  Installing ghostty..."
+        brew install --cask ghostty || echo -e "  ${RED}⚠️  Failed to install ghostty${NC}"
     fi
 
-    echo -e "${GREEN}✅ iTerm2 installed${NC}"
-}
-
-install_kitty() {
-    echo -e "${YELLOW}🐱 Installing kitty terminal...${NC}"
-
-    # kitty may already be installed manually under /Applications without
-    # being tracked by Homebrew — only install the cask if neither is present.
-    if brew list --cask kitty &>/dev/null; then
-        echo -e "  ${GREEN}✅ kitty already installed (via Homebrew)${NC}"
-    elif [ -d "/Applications/kitty.app" ]; then
-        echo -e "  ${GREEN}✅ kitty already installed (under /Applications)${NC}"
-    else
-        echo "  Installing kitty..."
-        brew install --cask kitty || echo -e "  ${RED}⚠️  Failed to install kitty${NC}"
-    fi
-
-    echo -e "${GREEN}✅ kitty installed${NC}"
-}
-
-install_kitty_config() {
-    echo -e "${YELLOW}🐱 Installing kitty configuration...${NC}"
-
-    local src="$SCRIPT_DIR/.config/kitty/kitty.conf"
-    local dest_dir="$HOME_DIR/.config/kitty"
-    local dest="$dest_dir/kitty.conf"
-
-    if [ ! -f "$src" ]; then
-        echo -e "  ${RED}⚠️  kitty.conf not found at $src — skipping${NC}"
-        return 0
-    fi
-
-    mkdir -p "$dest_dir"
-
-    if [ -f "$dest" ] && ! cmp -s "$src" "$dest"; then
-        echo -e "  ${YELLOW}💾 Backing up existing kitty.conf to kitty.conf.backup${NC}"
-        cp "$dest" "$dest.backup"
-    fi
-
-    cp "$src" "$dest"
-    echo -e "  ${GREEN}✅ kitty.conf installed to $dest${NC}"
-    echo -e "  ${CYAN}💡 Reload in kitty with Cmd+, (or restart kitty)${NC}"
+    echo -e "${GREEN}✅ Ghostty installed${NC}"
 }
 
 install_pipx() {
@@ -566,29 +483,17 @@ setup_fzf() {
 install_claude_code() {
     echo -e "${YELLOW}📦 Installing Claude Code CLI...${NC}"
 
-    # Claude Code requires Node.js — source NVM and install LTS if needed
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-    if ! command_exists node; then
-        echo -e "${YELLOW}   Node.js not found. Installing LTS via NVM...${NC}"
-        if command_exists nvm; then
-            nvm install --lts
-            nvm use --lts
-        else
-            echo -e "${RED}❌ NVM not available. Cannot install Node.js — skipping Claude Code.${NC}"
-            return
-        fi
-    fi
-
-    if command_exists claude; then
+    if brew list --cask claude-code &>/dev/null; then
+        echo -e "${GREEN}✅ Claude Code CLI already installed (via Homebrew)${NC}"
+        command_exists claude && claude --version
+    elif command_exists claude; then
         echo -e "${GREEN}✅ Claude Code CLI already installed${NC}"
         claude --version
     else
-        echo -e "${YELLOW}   Installing Claude Code via npm...${NC}"
-        if npm install -g @anthropic-ai/claude-code; then
+        echo -e "${YELLOW}   Installing Claude Code via Homebrew...${NC}"
+        if brew install --cask claude-code; then
             echo -e "${GREEN}✅ Claude Code CLI installed successfully${NC}"
-            claude --version
+            command_exists claude && claude --version
         else
             echo -e "${YELLOW}⚠️  Failed to install Claude Code CLI${NC}"
             return
@@ -671,15 +576,25 @@ configure_git() {
     fi
 
     # Configure GPG signing
+    # Only enable signing when a key is provided AND its secret key is actually
+    # present in the keyring — otherwise every commit fails with "No secret key".
     echo "  Configuring GPG signing..."
-    git config --global commit.gpgsign true 2>/dev/null || true
 
-    # Use environment variable for signing key if provided, otherwise use default
-    if [ -n "$GIT_SIGNING_KEY" ]; then
-        git config --global user.signingkey "$GIT_SIGNING_KEY" 2>/dev/null || true
-        echo -e "  ${GREEN}✅ GPG signing key set to: $GIT_SIGNING_KEY${NC}"
+    # Prefer explicit env var; fall back to any existing configured key.
+    local signing_key="${GIT_SIGNING_KEY:-$(git config --global user.signingkey 2>/dev/null || echo "")}"
+
+    if [ -n "$signing_key" ] && command_exists gpg && gpg --list-secret-keys "$signing_key" &>/dev/null; then
+        git config --global user.signingkey "$signing_key" 2>/dev/null || true
+        git config --global commit.gpgsign true 2>/dev/null || true
+        echo -e "  ${GREEN}✅ GPG signing enabled with key: $signing_key${NC}"
     else
-        git config --global user.signingkey 1CF7369F7EEAAF61 2>/dev/null || true
+        git config --global commit.gpgsign false 2>/dev/null || true
+        if [ -n "$signing_key" ]; then
+            echo -e "  ${YELLOW}⚠️  Signing key '$signing_key' has no secret key in this keyring — commit signing left disabled.${NC}"
+        else
+            echo -e "  ${YELLOW}⚠️  No GPG signing key available — commit signing left disabled.${NC}"
+            echo -e "     ${YELLOW}Set GIT_USER_SIGNING_KEY (and import the key) to enable it.${NC}"
+        fi
     fi
 
     # Set up credential helper for macOS
@@ -719,6 +634,19 @@ configure_git() {
     git config --global alias.git "!f() { git \"\$@\"; }; f" 2>/dev/null || true
     git config --global alias.grog "log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(dim white) - %an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"" 2>/dev/null || true
     git config --global alias.unlock "!rm -f .git/index.lock" 2>/dev/null || true
+
+    # Configure git-secrets to scan for credentials before committing
+    if command_exists git-secrets || command_exists git\ secrets || brew list git-secrets &>/dev/null; then
+        echo "  Configuring git-secrets..."
+        # Install hooks into a template dir so every newly cloned/init'd repo gets them
+        local git_template_dir="$HOME/.git-templates/git-secrets"
+        mkdir -p "$git_template_dir"
+        git secrets --install -f "$git_template_dir" &>/dev/null || true
+        git config --global init.templateDir "$git_template_dir" 2>/dev/null || true
+        # Register common AWS credential patterns globally
+        git secrets --register-aws --global &>/dev/null || true
+        echo -e "  ${GREEN}✅ git-secrets configured (AWS patterns + repo template hooks)${NC}"
+    fi
 
     echo -e "${GREEN}✅ Git configured${NC}"
 }
@@ -969,24 +897,14 @@ main() {
         install_fonts
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 6b: Installing iTerm2${NC}"
+        echo -e "${BOLD}${BLUE}Step 6b: Installing Ghostty${NC}"
         echo ""
-        install_iterm2
-        echo ""
-
-        echo -e "${BOLD}${BLUE}Step 6c: Configuring iTerm2${NC}"
-        echo ""
-        configure_iterm2
+        install_ghostty
         echo ""
 
-        echo -e "${BOLD}${BLUE}Step 6d: Installing kitty terminal${NC}"
+        echo -e "${BOLD}${BLUE}Step 6c: Installing Ghostty configuration${NC}"
         echo ""
-        install_kitty
-        echo ""
-
-        echo -e "${BOLD}${BLUE}Step 6e: Installing kitty configuration${NC}"
-        echo ""
-        install_kitty_config
+        install_ghostty_config
         echo ""
 
         echo -e "${BOLD}${BLUE}Step 7: Installing NVM${NC}"
@@ -1063,7 +981,7 @@ main() {
     echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     echo -e "${CYAN}Next steps:${NC}"
-    echo -e "  1. Open a new iTerm2 window to see the updated font"
+    echo -e "  1. Open a new Ghostty window to see the updated font"
     if [[ "$INSTALL_NODE_LTS" != "y" ]] && [[ "$INSTALL_NODE_LTS" != "true" ]] && [[ "$INSTALL_DEPENDENCIES" == "y" || "$INSTALL_DEPENDENCIES" == "true" ]]; then
         echo -e "  2. Install Node.js LTS: ${YELLOW}nvm install --lts${NC}"
     fi

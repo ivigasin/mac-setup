@@ -147,10 +147,11 @@ run_test "fzf installed"    false command_exists fzf
 run_test "zoxide installed" false command_exists zoxide
 run_test "fd installed"     false command_exists fd
 run_test "neovim installed" false command_exists nvim
+run_test "mc installed"     false command_exists mc
 run_test "gh installed"     false command_exists gh
-run_test "iTerm2 installed" false bash -c "[ -d /Applications/iTerm.app ] || brew list --cask iterm2 >/dev/null 2>&1"
-run_test "kitty installed"  false bash -c "[ -d /Applications/kitty.app ] || brew list --cask kitty >/dev/null 2>&1"
-run_test "kitty.conf installed" false file_exists "$HOME/.config/kitty/kitty.conf"
+run_test "git-secrets installed" false bash -c "command -v git-secrets >/dev/null 2>&1 || git secrets --version >/dev/null 2>&1 || brew list git-secrets >/dev/null 2>&1"
+run_test "Ghostty installed" false bash -c "[ -d /Applications/Ghostty.app ] || brew list --cask ghostty >/dev/null 2>&1"
+run_test "Ghostty config installed" false file_exists "$HOME/.config/ghostty/config"
 
 if command_exists bat; then
     run_test "bat --version succeeds" false bash -c "bat --version >/dev/null"
@@ -208,7 +209,8 @@ if command_exists git; then
     run_test "git user.email set"         false bash -c "git config --global user.email | grep -q ."
     run_test "default branch is main"     false bash -c "git config --global init.defaultBranch | grep -q main"
     run_test "pull.rebase enabled"        false bash -c "git config --global pull.rebase | grep -q true"
-    run_test "commit.gpgsign enabled"     false bash -c "git config --global commit.gpgsign | grep -q true"
+    # Signing is only enabled when a usable secret key exists; either value is valid.
+    run_test "commit.gpgsign configured"  false bash -c "git config --global commit.gpgsign | grep -qE 'true|false'"
     run_test "credential helper set"      false bash -c "git config --global credential.helper | grep -q ."
     run_test "git alias st defined"       false bash -c "git config --global alias.st | grep -q ."
     run_test "git alias lg defined"       false bash -c "git config --global alias.lg | grep -q ."

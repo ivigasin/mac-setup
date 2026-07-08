@@ -15,10 +15,9 @@ The repository uses a single all-in-one script that handles everything:
 - Installs zsh configuration files (from inline functions)
 - Installs Homebrew (handles both Intel and Apple Silicon)
 - Installs Oh My Zsh and plugins
-- Installs CLI tools via Homebrew (eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh)
+- Installs CLI tools via Homebrew (eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh, git-secrets)
 - Installs development tools (NVM, Go, Python, Java, pipx, Claude Code CLI)
-- Installs and configures iTerm2 (Nerd Font, default profile)
-- Installs kitty terminal and copies `.config/kitty/kitty.conf` (iTerm2-style keybindings)
+- Installs Ghostty terminal and copies `.config/ghostty/config` (Nerd Font, iTerm2-style keybindings)
 - Configures Git with aliases, colors, GPG signing
 - Sets up FZF key bindings
 - Optionally installs Node.js LTS and runs tests
@@ -112,7 +111,7 @@ GIT_USER_NAME="Name" GIT_USER_EMAIL="email@example.com" ./setup.sh --non-interac
 The setup.sh script automatically configures Git with:
 - Default branch: `main`
 - Pull strategy: rebase
-- GPG signing: enabled with configurable key
+- GPG signing: auto-enabled only when the signing key's secret key exists in the keyring; otherwise left disabled (no hardcoded fallback key)
 - Credential helper: macOS Keychain
 - Comprehensive color settings
 - Extensive aliases (st, ci, co, br, df, dc, lg, lp, lol, lola, grog, who, undo, unlock)
@@ -187,8 +186,8 @@ All scripts use consistent ANSI color codes:
 The repository includes automated installation and helpful utilities for Claude Code CLI.
 
 ### Installation
-Claude Code CLI is automatically installed by setup.sh:
-- Installs to `~/.claude/local/claude`
+Claude Code CLI is automatically installed by setup.sh via Homebrew:
+- Installed with `brew install --cask claude-code`
 - Available via `claude` command and various aliases
 
 ### Aliases
@@ -230,5 +229,5 @@ Quick shortcuts for common Claude Code operations:
 - Theme: Agnoster
 - Editor: neovim
 - Bat theme: Dracula
-- iTerm2 font: MesloLGS-NF-Regular 13
-- kitty config: `.config/kitty/kitty.conf` — splits/stack layout, powerline tabs, iTerm2-style Cmd bindings
+- Ghostty font: MesloLGS Nerd Font 13
+- Ghostty config: `.config/ghostty/config` — Nerd Font, splits, iTerm2-style Cmd bindings

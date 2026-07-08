@@ -9,7 +9,7 @@ Automated setup script for configuring a new Mac with my preferred CLI tools and
 - 🔌 **Zsh plugins**: autosuggestions, syntax highlighting, history substring search, fzf
 - 🛠️ **Modern CLI tools**: eza, bat, ripgrep, fzf, zoxide, gh
 - 📦 **Development tools**: NVM, Go, Python, Java
-- 🖥️ **Terminals**: iTerm2 with Nerd Font, kitty with iTerm2-style keybindings
+- 🖥️ **Terminal**: Ghostty with Nerd Font and iTerm2-style keybindings
 - 🤖 **AI Development**: Claude Code CLI with helpful aliases and functions
 - 📁 **Modular configuration**: Split into organized files
 - ⚙️ **Git configuration**: Automatic setup with GPG signing, aliases, and color schemes
@@ -69,8 +69,7 @@ The setup script installs:
 - **Oh My Zsh** with plugins (autosuggestions, syntax highlighting, etc.)
 - **CLI Tools** - eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh
 - **Development Tools** - NVM, Go, Python 3.11, Java, pipx
-- **iTerm2** - Installed and configured with Nerd Font (MesloLGS NF)
-- **kitty** - Installed with iTerm2-style keybindings (`~/.config/kitty/kitty.conf`)
+- **Ghostty** - Installed with Nerd Font and iTerm2-style keybindings (`~/.config/ghostty/config`)
 - **Nerd Fonts** - font-meslo-lg-nerd-font, font-hack-nerd-font
 - **Claude Code CLI** - AI-powered coding assistant
 - **Git Configuration** - Aliases, colors, GPG signing, and credentials
@@ -127,9 +126,8 @@ Or simply open a new terminal window.
 - **fd** - Fast find replacement
 - **gh** - GitHub CLI for PRs, issues, and repo operations
 
-### Terminal Emulators
-- **iTerm2** - Installed and configured with MesloLGS NF font; dynamic profile `mac-setup` set as default
-- **kitty** - Installed with a custom `kitty.conf` that mirrors iTerm2 keybindings (Cmd+T tabs, Cmd+D splits, Cmd+Opt+Arrow navigation, etc.). Config lives at `~/.config/kitty/kitty.conf`; reload with `Cmd+,`.
+### Terminal Emulator
+- **Ghostty** - Installed with a custom `config` that sets the MesloLGS Nerd Font and mirrors iTerm2 keybindings (Cmd+T tabs, Cmd+D splits, Cmd+Opt+Arrow navigation, etc.). Config lives at `~/.config/ghostty/config`; reload with `Cmd+Shift+,`.
 
 ### Development Tools
 - **NVM** - Node Version Manager
@@ -143,7 +141,7 @@ Or simply open a new terminal window.
 The setup script automatically configures Git with:
 - **Default branch**: Set to `main`
 - **Pull strategy**: Uses rebase by default
-- **GPG signing**: Enabled for commits with signing key configured
+- **GPG signing**: Auto-enabled only when a usable secret key is present in the keyring; otherwise left disabled (set `GIT_USER_SIGNING_KEY` and import the key to enable)
 - **Color output**: Comprehensive color configuration for branches, diffs, and status
 - **Credential helper**: Configured for macOS Keychain
 - **Extensive aliases**: 

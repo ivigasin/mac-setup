@@ -151,6 +151,8 @@ run_test "mc installed"     false command_exists mc
 run_test "gh installed"     false command_exists gh
 run_test "git-secrets installed" false bash -c "command -v git-secrets >/dev/null 2>&1 || git secrets --version >/dev/null 2>&1 || brew list git-secrets >/dev/null 2>&1"
 run_test "Ghostty installed" false bash -c "[ -d /Applications/Ghostty.app ] || brew list --cask ghostty >/dev/null 2>&1"
+run_test "VS Code installed" false bash -c "[ -d '/Applications/Visual Studio Code.app' ] || brew list --cask visual-studio-code >/dev/null 2>&1"
+run_test "code CLI available"  false command_exists code
 run_test "Ghostty config installed" false file_exists "$HOME/.config/ghostty/config"
 
 if command_exists bat; then

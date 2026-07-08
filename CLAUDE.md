@@ -18,6 +18,7 @@ The repository uses a single all-in-one script that handles everything:
 - Installs CLI tools via Homebrew (eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh, git-secrets)
 - Installs development tools (NVM, Go, Python, Java, pipx, Claude Code CLI)
 - Installs Ghostty terminal and copies `.config/ghostty/config` (Nerd Font, iTerm2-style keybindings)
+- Installs Visual Studio Code (cask) and ensures the `code` command-line tool is on PATH
 - Configures Git with aliases, colors, GPG signing
 - Sets up FZF key bindings
 - Optionally installs Node.js LTS and runs tests

@@ -156,6 +156,10 @@ show_installation_summary() {
         echo -e "  ${GREEN}✓${NC} Ghostty (installed + Nerd Font + iTerm2-style keybindings)"
         echo ""
 
+        echo -e "${CYAN}📝 Editors:${NC}"
+        echo -e "  ${GREEN}✓${NC} Visual Studio Code (app + 'code' command-line tool)"
+        echo ""
+
         echo -e "${CYAN}🛠️  CLI Tools (via Homebrew):${NC}"
         echo -e "  ${GREEN}✓${NC} eza (modern ls replacement)"
         echo -e "  ${GREEN}✓${NC} bat (modern cat replacement)"
@@ -457,6 +461,36 @@ install_ghostty() {
     fi
 
     echo -e "${GREEN}✅ Ghostty installed${NC}"
+}
+
+install_vscode() {
+    echo -e "${YELLOW}💻 Installing Visual Studio Code...${NC}"
+
+    if brew list --cask visual-studio-code &>/dev/null; then
+        echo -e "  ${GREEN}✅ VS Code already installed (via Homebrew)${NC}"
+    elif [ -d "/Applications/Visual Studio Code.app" ]; then
+        echo -e "  ${GREEN}✅ VS Code already installed (under /Applications)${NC}"
+    else
+        echo "  Installing Visual Studio Code..."
+        brew install --cask visual-studio-code || echo -e "  ${RED}⚠️  Failed to install VS Code${NC}"
+    fi
+
+    # The Homebrew cask symlinks the 'code' CLI onto PATH automatically. If it's
+    # not resolvable (e.g. app installed manually), fall back to the bundled binary.
+    if command_exists code; then
+        echo -e "  ${GREEN}✅ 'code' command-line tool available${NC}"
+    else
+        local vscode_cli="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+        local brew_bin; brew_bin="$(brew --prefix 2>/dev/null)/bin"
+        if [ -x "$vscode_cli" ] && [ -d "$brew_bin" ]; then
+            ln -sf "$vscode_cli" "$brew_bin/code"
+            echo -e "  ${GREEN}✅ Linked 'code' command-line tool into $brew_bin${NC}"
+        else
+            echo -e "  ${YELLOW}⚠️  'code' CLI not found — open VS Code and run 'Shell Command: Install code command in PATH'${NC}"
+        fi
+    fi
+
+    echo -e "${GREEN}✅ Visual Studio Code installed${NC}"
 }
 
 install_pipx() {
@@ -905,6 +939,11 @@ main() {
         echo -e "${BOLD}${BLUE}Step 6c: Installing Ghostty configuration${NC}"
         echo ""
         install_ghostty_config
+        echo ""
+
+        echo -e "${BOLD}${BLUE}Step 6d: Installing Visual Studio Code${NC}"
+        echo ""
+        install_vscode
         echo ""
 
         echo -e "${BOLD}${BLUE}Step 7: Installing NVM${NC}"

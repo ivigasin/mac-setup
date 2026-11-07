@@ -8,20 +8,10 @@ export LC_ALL=en_US.UTF-8
 export EDITOR='nvim'
 export VISUAL="$EDITOR"
 
-# NVM configuration
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# Language runtimes (node, python, go, java) are managed by mise — see tools.zsh
 
-# Go PATH
-export PATH=$PATH:$(go env GOPATH)/bin
-
-# Python/pipx PATH
-export PATH="$PATH:/Users/igorvigasin/Library/Python/3.9/bin"
-export PATH="$PATH:/Users/igorvigasin/.local/bin"
-
-# Java PATH
-export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
+# Go-installed binaries (go install ...)
+export PATH="$PATH:$HOME/go/bin"
 
 # Rancher Desktop PATH
 ### MANAGED BY RANCHER DESKTOP START (DO NOT EDIT)

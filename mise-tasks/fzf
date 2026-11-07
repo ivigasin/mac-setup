@@ -1,0 +1,17 @@
+#!/bin/bash
+#MISE description="Set up FZF key bindings"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+setup_fzf() {
+    if command_exists fzf && [ ! -f "$HOME/.fzf.zsh" ]; then
+        echo -e "${YELLOW}⚙️  Setting up FZF...${NC}"
+        "$(brew --prefix)/opt/fzf/install" --all --no-bash --no-fish
+        echo -e "${GREEN}✅ FZF configured${NC}"
+    elif [ -f "$HOME/.fzf.zsh" ]; then
+        echo -e "${GREEN}✅ FZF already configured${NC}"
+    fi
+}
+
+setup_fzf

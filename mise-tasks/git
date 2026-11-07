@@ -1,0 +1,141 @@
+#!/bin/bash
+#MISE description="Configure Git (identity, GPG signing, colors, aliases, git-secrets)"
+#MISE raw=true
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+# Values collected by `mise run setup`, falling back to the documented env vars
+GIT_NAME="${GIT_NAME:-${GIT_USER_NAME:-}}"
+GIT_EMAIL="${GIT_EMAIL:-${GIT_USER_EMAIL:-}}"
+GIT_SIGNING_KEY="${GIT_SIGNING_KEY:-${GIT_USER_SIGNING_KEY:-}}"
+
+configure_git() {
+    echo -e "${YELLOW}⚙️  Configuring Git...${NC}"
+
+    if ! command_exists git; then
+        echo -e "${RED}⚠️  Git is not installed. Skipping Git configuration.${NC}"
+        return
+    fi
+
+    # Configure common Git settings
+    echo "  Setting up Git defaults..."
+
+    # Set default branch name to main
+    git config --global init.defaultBranch main 2>/dev/null || true
+
+    # Use rebase for pulls
+    git config --global pull.rebase true 2>/dev/null || true
+
+    # Configure user name and email
+    if [ -n "$GIT_NAME" ]; then
+        git config --global user.name "$GIT_NAME"
+        echo -e "  ${GREEN}✅ Git user name set to: $GIT_NAME${NC}"
+    elif [ -z "$(git config --global user.name)" ]; then
+        if [ "$INTERACTIVE_MODE" = true ]; then
+            echo ""
+            echo -e "${BLUE}   Git user name is not configured.${NC}"
+            read -p "   Enter your Git user name (or press Enter to skip): " git_name
+            if [ -n "$git_name" ]; then
+                git config --global user.name "$git_name"
+                echo -e "${GREEN}   ✅ Git user name set to: $git_name${NC}"
+            fi
+        fi
+    else
+        echo -e "  ${GREEN}✅ Git user name already configured: $(git config --global user.name)${NC}"
+    fi
+
+    if [ -n "$GIT_EMAIL" ]; then
+        git config --global user.email "$GIT_EMAIL"
+        echo -e "  ${GREEN}✅ Git user email set to: $GIT_EMAIL${NC}"
+    elif [ -z "$(git config --global user.email)" ]; then
+        if [ "$INTERACTIVE_MODE" = true ]; then
+            echo ""
+            echo -e "${BLUE}   Git user email is not configured.${NC}"
+            read -p "   Enter your Git user email (or press Enter to skip): " git_email
+            if [ -n "$git_email" ]; then
+                git config --global user.email "$git_email"
+                echo -e "${GREEN}   ✅ Git user email set to: $git_email${NC}"
+            fi
+        fi
+    else
+        echo -e "  ${GREEN}✅ Git user email already configured: $(git config --global user.email)${NC}"
+    fi
+
+    # Configure GPG signing
+    # Only enable signing when a key is provided AND its secret key is actually
+    # present in the keyring — otherwise every commit fails with "No secret key".
+    echo "  Configuring GPG signing..."
+
+    # Prefer explicit env var; fall back to any existing configured key.
+    local signing_key="${GIT_SIGNING_KEY:-$(git config --global user.signingkey 2>/dev/null || echo "")}"
+
+    if [ -n "$signing_key" ] && command_exists gpg && gpg --list-secret-keys "$signing_key" &>/dev/null; then
+        git config --global user.signingkey "$signing_key" 2>/dev/null || true
+        git config --global commit.gpgsign true 2>/dev/null || true
+        echo -e "  ${GREEN}✅ GPG signing enabled with key: $signing_key${NC}"
+    else
+        git config --global commit.gpgsign false 2>/dev/null || true
+        if [ -n "$signing_key" ]; then
+            echo -e "  ${YELLOW}⚠️  Signing key '$signing_key' has no secret key in this keyring — commit signing left disabled.${NC}"
+        else
+            echo -e "  ${YELLOW}⚠️  No GPG signing key available — commit signing left disabled.${NC}"
+            echo -e "     ${YELLOW}Set GIT_USER_SIGNING_KEY (and import the key) to enable it.${NC}"
+        fi
+    fi
+
+    # Set up credential helper for macOS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        git config --global credential.helper osxkeychain 2>/dev/null || true
+    fi
+
+    # Configure color settings
+    echo "  Configuring color settings..."
+    git config --global color.ui true 2>/dev/null || true
+    git config --global color.branch.current "yellow reverse" 2>/dev/null || true
+    git config --global color.branch.local "yellow" 2>/dev/null || true
+    git config --global color.branch.remote "green" 2>/dev/null || true
+    git config --global color.diff.meta "yellow bold" 2>/dev/null || true
+    git config --global color.diff.frag "magenta bold" 2>/dev/null || true
+    git config --global color.diff.old "red bold" 2>/dev/null || true
+    git config --global color.diff.new "green bold" 2>/dev/null || true
+    git config --global color.status.added "yellow" 2>/dev/null || true
+    git config --global color.status.changed "green" 2>/dev/null || true
+    git config --global color.status.untracked "cyan" 2>/dev/null || true
+
+    # Set up aliases
+    echo "  Configuring Git aliases..."
+    git config --global alias.st "status" 2>/dev/null || true
+    git config --global alias.ci "commit" 2>/dev/null || true
+    git config --global alias.br "branch" 2>/dev/null || true
+    git config --global alias.co "checkout" 2>/dev/null || true
+    git config --global alias.df "diff --color" 2>/dev/null || true
+    git config --global alias.dc "diff --color --cached" 2>/dev/null || true
+    git config --global alias.lg "log -p --color" 2>/dev/null || true
+    git config --global alias.who "shortlog -s --" 2>/dev/null || true
+    git config --global alias.lp "log --graph --pretty=format:'%Cred%h%Creset — %s %Cgreen(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative --color" 2>/dev/null || true
+    git config --global alias.undo "reset --hard" 2>/dev/null || true
+    git config --global alias.lol "log --graph --decorate --pretty=oneline --abbrev-commit" 2>/dev/null || true
+    git config --global alias.lola "log --graph --decorate --pretty=oneline --abbrev-commit --all" 2>/dev/null || true
+    git config --global alias.ls "ls-files" 2>/dev/null || true
+    git config --global alias.git "!f() { git \"\$@\"; }; f" 2>/dev/null || true
+    git config --global alias.grog "log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(dim white) - %an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"" 2>/dev/null || true
+    git config --global alias.unlock "!rm -f .git/index.lock" 2>/dev/null || true
+
+    # Configure git-secrets to scan for credentials before committing
+    if command_exists git-secrets || command_exists git\ secrets || brew list git-secrets &>/dev/null; then
+        echo "  Configuring git-secrets..."
+        # Install hooks into a template dir so every newly cloned/init'd repo gets them
+        local git_template_dir="$HOME/.git-templates/git-secrets"
+        mkdir -p "$git_template_dir"
+        git secrets --install -f "$git_template_dir" &>/dev/null || true
+        git config --global init.templateDir "$git_template_dir" 2>/dev/null || true
+        # Register common AWS credential patterns globally
+        git secrets --register-aws --global &>/dev/null || true
+        echo -e "  ${GREEN}✅ git-secrets configured (AWS patterns + repo template hooks)${NC}"
+    fi
+
+    echo -e "${GREEN}✅ Git configured${NC}"
+}
+
+configure_git

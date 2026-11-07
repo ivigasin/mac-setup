@@ -1,0 +1,10 @@
+#!/bin/bash
+#MISE description="Verify the setup (runs test.sh)"
+
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+if [ -f "$SCRIPT_DIR/test.sh" ]; then
+    bash "$SCRIPT_DIR/test.sh"
+else
+    echo -e "${YELLOW}⚠️  test.sh not found. Skipping tests.${NC}"
+fi

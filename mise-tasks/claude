@@ -1,0 +1,51 @@
+#!/bin/bash
+#MISE description="Install and authenticate Claude Code CLI"
+#MISE raw=true
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+install_claude_code() {
+    echo -e "${YELLOW}📦 Installing Claude Code CLI...${NC}"
+
+    if brew list --cask claude-code &>/dev/null; then
+        echo -e "${GREEN}✅ Claude Code CLI already installed (via Homebrew)${NC}"
+        command_exists claude && claude --version
+    elif command_exists claude; then
+        echo -e "${GREEN}✅ Claude Code CLI already installed${NC}"
+        claude --version
+    else
+        echo -e "${YELLOW}   Installing Claude Code via Homebrew...${NC}"
+        if brew install --cask claude-code; then
+            echo -e "${GREEN}✅ Claude Code CLI installed successfully${NC}"
+            command_exists claude && claude --version
+        else
+            echo -e "${YELLOW}⚠️  Failed to install Claude Code CLI${NC}"
+            return
+        fi
+    fi
+
+    authenticate_claude_code
+}
+
+authenticate_claude_code() {
+    echo -e "${YELLOW}🔑 Authenticating Claude Code...${NC}"
+
+    # Already authenticated if session file exists
+    if [ -f "$HOME/.claude/.credentials.json" ] || [ -f "$HOME/.claude/auth.json" ]; then
+        echo -e "${GREEN}✅ Claude Code already authenticated${NC}"
+        return
+    fi
+
+    if [ "$INTERACTIVE_MODE" = true ]; then
+        echo -e "${BLUE}   Starting browser-based authentication...${NC}"
+        claude auth login
+    elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+        echo -e "${GREEN}✅ ANTHROPIC_API_KEY is set — Claude Code will use it automatically${NC}"
+    else
+        echo -e "${YELLOW}⚠️  No authentication configured.${NC}"
+        echo -e "${YELLOW}   Run 'claude auth login' after setup, or set ANTHROPIC_API_KEY.${NC}"
+    fi
+}
+
+install_claude_code

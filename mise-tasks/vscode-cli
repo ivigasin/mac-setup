@@ -1,0 +1,22 @@
+#!/bin/bash
+#MISE description="Ensure the VS Code 'code' command-line tool is on PATH"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+echo -e "${YELLOW}💻 Checking Visual Studio Code CLI...${NC}"
+
+# The Homebrew cask symlinks the 'code' CLI onto PATH automatically. If it's
+# not resolvable (e.g. app installed manually), fall back to the bundled binary.
+if command_exists code; then
+    echo -e "  ${GREEN}✅ 'code' command-line tool available${NC}"
+else
+    vscode_cli="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    brew_bin="$(brew --prefix 2>/dev/null)/bin"
+    if [ -x "$vscode_cli" ] && [ -d "$brew_bin" ]; then
+        ln -sf "$vscode_cli" "$brew_bin/code"
+        echo -e "  ${GREEN}✅ Linked 'code' command-line tool into $brew_bin${NC}"
+    else
+        echo -e "  ${YELLOW}⚠️  'code' CLI not found — open VS Code and run 'Shell Command: Install code command in PATH'${NC}"
+    fi
+fi

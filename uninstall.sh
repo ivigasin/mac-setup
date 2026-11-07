@@ -2,8 +2,9 @@
 # =============================================================================
 # uninstall.sh — Reverse everything installed/configured by setup.sh
 # =============================================================================
-# Removes: zsh config, Homebrew packages & casks, Oh My Zsh + plugins, NVM,
-# pipx, FZF config, Ghostty config, and the Git settings/aliases setup.sh adds.
+# Removes: zsh config, Homebrew packages & casks, Oh My Zsh + plugins, mise
+# global runtime config, legacy NVM, pipx, FZF config, Ghostty config, and the
+# Git settings/aliases setup.sh adds.
 #
 # By default it does NOT remove Homebrew itself or your Git identity
 # (user.name/email/signingkey) — those are opt-in via flags.
@@ -106,8 +107,8 @@ remove_brew_packages() {
     fi
 
     local packages=(
-        eza bat ripgrep fzf zoxide fd neovim go
-        "python@3.11" openjdk gnupg pinentry-mac gh pipx
+        eza bat ripgrep fzf zoxide fd neovim
+        gnupg pinentry-mac gh pipx
     )
     for pkg in "${packages[@]}"; do
         if brew list "$pkg" &>/dev/null; then
@@ -159,6 +160,31 @@ remove_oh_my_zsh() {
     echo ""
 }
 
+remove_mise_config() {
+    echo -e "${BOLD}${BLUE}Removing mise runtime configuration${NC}"
+    local mise_config="$HOME_DIR/.config/mise/config.toml"
+
+    # Restore backup if setup made one, otherwise remove our global config
+    if [ -f "$mise_config.backup" ]; then
+        run "restore ~/.config/mise/config.toml from backup" bash -c \
+            'mv -f "$HOME/.config/mise/config.toml.backup" "$HOME/.config/mise/config.toml"'
+    elif [ -f "$mise_config" ]; then
+        run "remove ~/.config/mise/config.toml" rm -f "$mise_config"
+    else
+        echo -e "  ${GREEN}✓${NC} no mise global config found"
+    fi
+
+    if grep -q "mise activate zsh --shims" "$HOME_DIR/.zprofile" 2>/dev/null; then
+        run "remove mise shims from ~/.zprofile" sed -i '' \
+            -e '/# mise shims for non-interactive shells/d' \
+            -e '/mise activate zsh --shims/d' "$HOME_DIR/.zprofile"
+    fi
+
+    echo -e "  ${CYAN}ℹ️  mise itself and installed runtimes are kept. Run 'mise implode' to remove them.${NC}"
+    echo ""
+}
+
+# Legacy: machines set up before the move to mise used NVM
 remove_nvm() {
     echo -e "${BOLD}${BLUE}Removing NVM${NC}"
     if [ -d "$HOME_DIR/.nvm" ]; then
@@ -254,10 +280,10 @@ main() {
     echo -e "This will remove everything setup.sh installed:"
     echo -e "  • ~/.zshrc (restored from backup if present) and ~/.zsh/"
     echo -e "  • Homebrew packages: eza, bat, ripgrep, fzf, zoxide, fd, neovim,"
-    echo -e "    go, python@3.11, openjdk, gnupg, pinentry-mac, gh, pipx"
+    echo -e "    gnupg, pinentry-mac, gh, pipx"
     echo -e "  • Homebrew casks: ghostty, claude-code, MesloLGS & Hack Nerd Fonts"
     echo -e "  • Oh My Zsh (~/.oh-my-zsh) and plugins"
-    echo -e "  • NVM (~/.nvm)"
+    echo -e "  • mise global runtime config (~/.config/mise/config.toml) and legacy NVM (~/.nvm)"
     echo -e "  • FZF config (~/.fzf.zsh) and Ghostty config (~/.config/ghostty/config)"
     echo -e "  • Git aliases, colors, and settings added by setup.sh"
     echo ""
@@ -285,6 +311,7 @@ main() {
     remove_ghostty_config
     remove_brew_packages
     remove_oh_my_zsh
+    remove_mise_config
     remove_nvm
     remove_git_config
     [ "$REMOVE_HOMEBREW" = true ] && remove_homebrew

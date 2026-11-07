@@ -1,0 +1,5 @@
+# Mac Setup — mise project configuration
+# Setup steps live as file tasks in mise-tasks/ (auto-discovered).
+#   mise tasks ls          # list all steps
+#   mise run setup         # full setup (what ./setup.sh runs)
+#   mise run <step>        # run a single step, e.g. `mise run git`

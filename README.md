@@ -8,7 +8,8 @@ Automated setup script for configuring a new Mac with my preferred CLI tools and
 - 🎨 **Oh My Zsh** with Agnoster theme
 - 🔌 **Zsh plugins**: autosuggestions, syntax highlighting, history substring search, fzf
 - 🛠️ **Modern CLI tools**: eza, bat, ripgrep, fzf, zoxide, gh
-- 📦 **Development tools**: NVM, Go, Python, Java
+- 📦 **Language runtimes via [mise](https://mise.jdx.dev)**: Node.js, Python, Go, Java — with per-project versions
+- 🍺 **Homebrew + Brewfile**: CLI tools, apps and fonts declared in one file
 - 🖥️ **Terminal**: Ghostty with Nerd Font and iTerm2-style keybindings
 - 🤖 **AI Development**: Claude Code CLI with helpful aliases and functions
 - 📁 **Modular configuration**: Split into organized files
@@ -30,10 +31,25 @@ The interactive setup will:
 - ✅ Collect your Git configuration (name, email, GPG key)
 - ✅ Let you choose what to install
 - ✅ Run all installation steps automatically
-- ✅ Optionally install Node.js LTS
 - ✅ Run tests to verify everything works
 
 **That's it!** The setup script handles everything for you.
+
+### How it works
+
+`setup.sh` is a small bootstrap: it installs [mise](https://mise.jdx.dev) if missing and runs `mise run setup`.
+Every step is a mise task in `mise-tasks/`, so you can re-run any one of them on its own:
+
+```bash
+mise tasks ls          # list all steps
+mise run brew-bundle   # install anything new added to the Brewfile
+mise run runtimes      # (re)install node/python/go/java from .config/mise/config.toml
+mise run git           # re-apply Git configuration
+mise run zsh-config    # re-copy zsh config files
+```
+
+- **Homebrew** packages, apps and fonts are declared in `Brewfile` and installed with `brew bundle` (driven by the `brew-bundle` task).
+- **Language runtimes** are declared in `.config/mise/config.toml`, copied to `~/.config/mise/config.toml`, and installed by mise. Projects can pin their own versions with `mise.toml`, `.nvmrc`, `.node-version` or `.python-version`.
 
 ### Non-Interactive Setup
 
@@ -44,7 +60,7 @@ For automation or CI/CD environments:
 ./setup.sh --non-interactive
 
 # Or customize with options
-./setup.sh --non-interactive --install-node --skip-tests
+./setup.sh --non-interactive --skip-zsh --skip-tests
 
 # With environment variables
 GIT_USER_NAME="Your Name" \
@@ -57,7 +73,7 @@ GIT_USER_SIGNING_KEY="YOUR_GPG_KEY" \
 - `--non-interactive` - Run without prompts
 - `--skip-zsh` - Skip zsh configuration installation
 - `--skip-deps` - Skip dependency installation
-- `--install-node` - Install Node.js LTS
+- `--install-node` - No-op, kept for compatibility (Node.js LTS is always installed by mise)
 - `--skip-tests` - Skip running tests
 - `-h, --help` - Show help message
 
@@ -65,10 +81,12 @@ GIT_USER_SIGNING_KEY="YOUR_GPG_KEY" \
 
 The setup script installs:
 - **Zsh Configuration** - Modular config files in `~/.zsh/` directory
-- **Homebrew** - Automatically detects Intel/Apple Silicon Macs
+- **mise** - Runs the setup tasks and manages language runtimes
+- **Homebrew** - Automatically detects Intel/Apple Silicon Macs; packages come from `Brewfile`
 - **Oh My Zsh** with plugins (autosuggestions, syntax highlighting, etc.)
 - **CLI Tools** - eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh
-- **Development Tools** - NVM, Go, Python 3.11, Java, pipx
+- **Language Runtimes (mise)** - Node.js LTS, Python 3.11, Go (latest), Java (Temurin 21)
+- **Python tooling** - uv, pipx
 - **Ghostty** - Installed with Nerd Font and iTerm2-style keybindings (`~/.config/ghostty/config`)
 - **Nerd Fonts** - font-meslo-lg-nerd-font, font-hack-nerd-font
 - **Claude Code CLI** - AI-powered coding assistant
@@ -130,11 +148,12 @@ Or simply open a new terminal window.
 - **Ghostty** - Installed with a custom `config` that sets the MesloLGS Nerd Font and mirrors iTerm2 keybindings (Cmd+T tabs, Cmd+D splits, Cmd+Opt+Arrow navigation, etc.). Config lives at `~/.config/ghostty/config`; reload with `Cmd+Shift+,`.
 
 ### Development Tools
-- **NVM** - Node Version Manager
-- **Go** - Go programming language
-- **Python 3.11** - Python interpreter
-- **OpenJDK** - Java Development Kit
-- **pipx** - Python application installer
+- **mise** - Polyglot runtime manager; global versions in `~/.config/mise/config.toml`
+- **Node.js LTS** - via mise (respects `.nvmrc` / `.node-version` in projects)
+- **Python 3.11** - via mise (respects `.python-version`)
+- **Go** - via mise (latest)
+- **Java (Temurin 21)** - via mise
+- **uv / pipx** - Python package and application installers (Homebrew)
 - **Claude Code CLI** - AI-powered coding assistant with helpful shell functions
 
 ### Git Configuration
@@ -258,7 +277,7 @@ The test script checks:
 ### Scripts are not executable
 
 ```bash
-chmod +x install.sh setup.sh test.sh
+chmod +x setup.sh test.sh uninstall.sh mise-tasks/*
 ```
 
 ### Oh My Zsh plugins not working
@@ -268,6 +287,11 @@ Make sure plugins are installed in `~/.oh-my-zsh/custom/plugins/`. Run `setup.sh
 ### PATH issues
 
 Check `~/.zsh/exports.zsh` and ensure all paths are correct for your system.
+
+### A runtime resolves to the wrong version
+
+Run `mise doctor` (should report `activated: yes`) and `mise ls --current` in the directory in question.
+Interactive shells activate mise in `~/.zsh/tools.zsh`; non-interactive shells (IDEs, GUI apps) use the shims added to `~/.zprofile`.
 
 ## License
 

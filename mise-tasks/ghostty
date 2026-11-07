@@ -1,0 +1,31 @@
+#!/bin/bash
+#MISE description="Install Ghostty configuration"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+install_ghostty_config() {
+    echo -e "${YELLOW}👻 Installing Ghostty configuration...${NC}"
+
+    local src="$SCRIPT_DIR/.config/ghostty/config"
+    local dest_dir="$HOME_DIR/.config/ghostty"
+    local dest="$dest_dir/config"
+
+    if [ ! -f "$src" ]; then
+        echo -e "  ${RED}⚠️  ghostty config not found at $src — skipping${NC}"
+        return 0
+    fi
+
+    mkdir -p "$dest_dir"
+
+    if [ -f "$dest" ] && ! cmp -s "$src" "$dest"; then
+        echo -e "  ${YELLOW}💾 Backing up existing config to config.backup${NC}"
+        cp "$dest" "$dest.backup"
+    fi
+
+    cp "$src" "$dest"
+    echo -e "  ${GREEN}✅ Ghostty config installed to $dest${NC}"
+    echo -e "  ${CYAN}💡 Reload in Ghostty with Cmd+Shift+, (or restart Ghostty)${NC}"
+}
+
+install_ghostty_config

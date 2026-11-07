@@ -4,24 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an automated macOS setup repository for configuring a new Mac with CLI tools, zsh configuration, and development environments. The project uses a single unified bash script for installation and configuration management.
+This is an automated macOS setup repository for configuring a new Mac with CLI tools, zsh configuration, and development environments. mise is the backbone: a small bootstrap (`setup.sh`) installs mise, mise tasks run every setup step, Homebrew installs packages from a `Brewfile`, and mise manages the language runtimes.
 
 ## Script Architecture
 
-The repository uses a single all-in-one script that handles everything:
+```
+setup.sh                  # bootstrap: installs mise (~/.local/bin) if missing, then `exec mise run setup "$@"`
+mise.toml                 # project config; tasks are auto-discovered from mise-tasks/
+mise-tasks/               # one bash file task per step (run any alone: `mise run <step>`)
+  setup                   #   orchestrator: flags (#USAGE), wizard, summary, runs steps in order
+  brew                    #   install/update Homebrew (Intel + Apple Silicon)
+  omz                     #   Oh My Zsh + plugins
+  zsh-config              #   ~/.zshrc, ~/.zsh/*.zsh, Neovim config
+  brew-bundle             #   `brew bundle install --no-upgrade` from Brewfile (--upgrade to upgrade)
+  ghostty                 #   copy .config/ghostty/config
+  vscode-cli              #   ensure the `code` CLI is on PATH
+  runtimes                #   copy .config/mise/config.toml to ~/.config/mise/, add shims to ~/.zprofile, `mise install`
+  fzf                     #   FZF key bindings
+  claude                  #   Claude Code CLI install + auth
+  git                     #   Git defaults, GPG signing, colors, aliases, git-secrets
+  test                    #   runs test.sh
+lib/common.sh             # colors + helpers sourced by every task (command_exists, prompt_*, install_config_file, load_brew_env)
+Brewfile                  # CLI tools, GUI casks (guarded if the app already exists in /Applications), fonts
+.config/mise/config.toml  # global runtimes: node lts, python 3.11, go latest, java temurin-21
+test.sh / uninstall.sh    # verification / reversal
+```
 
-**setup.sh** - Unified installation script
-- Supports both interactive and non-interactive modes
-- Installs zsh configuration files (from inline functions)
-- Installs Homebrew (handles both Intel and Apple Silicon)
-- Installs Oh My Zsh and plugins
-- Installs CLI tools via Homebrew (eza, bat, ripgrep, fzf, zoxide, fd, neovim, gh, git-secrets)
-- Installs development tools (NVM, Go, Python, Java, pipx, Claude Code CLI)
-- Installs Ghostty terminal and copies `.config/ghostty/config` (Nerd Font, iTerm2-style keybindings)
-- Installs Visual Studio Code (cask) and ensures the `code` command-line tool is on PATH
-- Configures Git with aliases, colors, GPG signing
-- Sets up FZF key bindings
-- Optionally installs Node.js LTS and runs tests
+Runtimes (node, python, go, java) are **not** installed via Homebrew or nvm — only mise. Interactive zsh activates mise in `.zsh/tools.zsh`; non-interactive shells get mise shims from `~/.zprofile`.
 
 ### Execution Modes
 
@@ -37,21 +46,17 @@ The repository uses a single all-in-one script that handles everything:
    - Ideal for automation and CI/CD
    - Accepts: GIT_USER_NAME, GIT_USER_EMAIL, GIT_USER_SIGNING_KEY
 
-### Legacy Scripts
-
-The old modular scripts (wizard.sh, install.sh) have been backed up as *.old files but are no longer used.
-
 ## Zsh Configuration Structure
 
 The zsh configuration is split into modular files in the `.zsh/` directory:
 
 - **config.zsh** - Oh My Zsh theme (Agnoster) and plugins configuration
-- **exports.zsh** - Environment variables (LANG, EDITOR, PATH, NVM, Go, Python, Java)
+- **exports.zsh** - Environment variables (LANG, EDITOR, PATH, Go bin, FZF, bat)
 - **aliases.zsh** - Command aliases (modern tool replacements like eza, bat)
 - **functions.zsh** - Custom shell functions
 - **history.zsh** - History settings
 - **options.zsh** - Zsh options
-- **tools.zsh** - Tool-specific configurations (FZF, zoxide)
+- **tools.zsh** - Tool-specific configurations (FZF, zoxide, mise activation)
 
 The main `.zshrc` file sources all these files from `~/.zsh/`.
 
@@ -66,7 +71,7 @@ The main `.zshrc` file sources all these files from `~/.zsh/`.
 ./setup.sh --non-interactive
 
 # Non-interactive with custom options
-./setup.sh --non-interactive --install-node --skip-tests
+./setup.sh --non-interactive --skip-zsh --skip-tests
 
 # With environment variables
 GIT_USER_NAME="Name" GIT_USER_EMAIL="email@example.com" ./setup.sh --non-interactive
@@ -85,6 +90,12 @@ GIT_USER_NAME="Name" GIT_USER_EMAIL="email@example.com" ./setup.sh --non-interac
 
 # Interactive update (choose what to update)
 ./setup.sh
+
+# Run a single step
+mise tasks ls
+mise run brew-bundle   # after editing Brewfile
+mise run runtimes      # after editing .config/mise/config.toml
+mise run git
 ```
 
 ### Testing
@@ -103,13 +114,13 @@ GIT_USER_NAME="Name" GIT_USER_EMAIL="email@example.com" ./setup.sh --non-interac
 - `--non-interactive` - No prompts, use defaults or env vars
 - `--skip-zsh` - Skip zsh configuration installation
 - `--skip-deps` - Skip dependency installation
-- `--install-node` - Install Node.js LTS
+- `--install-node` - No-op, kept for compatibility (Node.js LTS is always installed by mise)
 - `--skip-tests` - Skip running tests
 - `-h, --help` - Show help message
 
 ## Git Configuration
 
-The setup.sh script automatically configures Git with:
+The `git` task (mise-tasks/git) automatically configures Git with:
 - Default branch: `main`
 - Pull strategy: rebase
 - GPG signing: auto-enabled only when the signing key's secret key exists in the keyring; otherwise left disabled (no hardcoded fallback key)
@@ -121,7 +132,7 @@ Git configuration accepts environment variables (GIT_USER_NAME, GIT_USER_EMAIL, 
 
 ## Homebrew Installation
 
-The setup.sh script handles Homebrew installation with:
+The `brew` task handles Homebrew installation with:
 - Automatic architecture detection (Intel vs Apple Silicon)
 - PATH configuration for current session and persistence via ~/.zprofile
 - Error handling and verification
@@ -133,24 +144,21 @@ Homebrew paths:
 
 ## Important Implementation Notes
 
-### Script Structure
-The setup.sh script is organized into distinct sections:
-1. **Utility Functions** - Helper functions (command_exists, file_exists, etc.)
-2. **Display Functions** - Banner, installation summary, setup summary
-3. **Zsh Configuration Installation** - Config file copying and installation
-4. **Dependency Installation Functions** - Individual installers for each tool
-5. **Interactive Wizard Functions** - User input collection and option prompts
-6. **Main Execution Flow** - Argument parsing and orchestration
+### Task Structure
+- Each file in `mise-tasks/` is an executable bash script with `#MISE description=...` headers; tasks that read stdin use `#MISE raw=true`.
+- Every task starts with `set -e` and `source "$MISE_PROJECT_ROOT/lib/common.sh"` (test.sh uses `set +e`).
+- `mise-tasks/setup` declares its flags with `#USAGE flag ...`; mise exposes them as `usage_<flag>` env vars (e.g. `usage_skip_deps=true`).
+- The orchestrator runs each step via `mise run --quiet <step>` and exports `INTERACTIVE_MODE`, `GIT_NAME`, `GIT_EMAIL`, `GIT_SIGNING_KEY` to them.
+- `lib/common.sh` loads Homebrew's shellenv for both architectures and sets `SCRIPT_DIR` (= `MISE_PROJECT_ROOT`) for relative paths.
+- Installation flags (INSTALL_ZSH_CONFIG, INSTALL_DEPENDENCIES, RUN_TESTS) control flow in the orchestrator.
 
-### Script Execution Context
-- Uses `set -e` for error handling (except test.sh which uses `set +e`)
-- INTERACTIVE_MODE flag controls prompting behavior
-- Sources Homebrew shellenv for both architectures
-- Uses SCRIPT_DIR for relative path resolution
-- Installation flags (INSTALL_ZSH_CONFIG, INSTALL_DEPENDENCIES, etc.) control flow
+### Adding Things
+- A Homebrew CLI/app/font → add a line to `Brewfile` (guard GUI casks with `unless File.exist?("/Applications/...")`).
+- A language runtime → add it to `.config/mise/config.toml` `[tools]`.
+- A new setup step → new file in `mise-tasks/` + a `run_step` line in `mise-tasks/setup` + an entry in `show_installation_summary`.
 
 ### Git Configuration Flow
-The configure_git() function:
+The configure_git() function (mise-tasks/git):
 1. Checks for environment variables (GIT_USER_NAME, GIT_USER_EMAIL, GIT_USER_SIGNING_KEY)
 2. Falls back to existing git config values
 3. Prompts user if values are missing (only in interactive mode)
@@ -162,13 +170,13 @@ The configure_git() function:
 - test.sh returns exit code 0 if critical tests pass
 
 ### File Modification
-When modifying setup.sh:
+When modifying setup tasks:
 - Maintain consistent color output scheme (RED, GREEN, YELLOW, BLUE, CYAN, NC)
 - Preserve the confirmation prompts in interactive mode
 - Keep the installation summary display functions
 - Maintain both interactive and non-interactive modes
 - Don't modify PATH exports in exports.zsh without understanding user-specific paths (e.g., Rancher Desktop section)
-- When adding new installation functions, follow the existing pattern:
+- When adding new installation tasks, follow the existing pattern:
   1. Check if already installed
   2. Display installation progress with colors
   3. Handle errors gracefully
@@ -187,7 +195,7 @@ All scripts use consistent ANSI color codes:
 The repository includes automated installation and helpful utilities for Claude Code CLI.
 
 ### Installation
-Claude Code CLI is automatically installed by setup.sh via Homebrew:
+Claude Code CLI is installed by the `claude` task via Homebrew (skipped when a native install is already on PATH):
 - Installed with `brew install --cask claude-code`
 - Available via `claude` command and various aliases
 
@@ -225,8 +233,10 @@ Quick shortcuts for common Claude Code operations:
 
 ## Default Tool Versions
 
-- Python: 3.11
-- NVM: v0.40.3
+- Node.js: LTS (mise)
+- Python: 3.11 (mise)
+- Go: latest (mise)
+- Java: Temurin 21 (mise)
 - Theme: Agnoster
 - Editor: neovim
 - Bat theme: Dracula

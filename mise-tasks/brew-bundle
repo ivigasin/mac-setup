@@ -1,0 +1,24 @@
+#!/bin/bash
+#MISE description="Install CLI tools, apps and fonts from the Brewfile"
+#USAGE flag "--upgrade" help="Also upgrade packages that are already installed"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+if ! command_exists brew; then
+    echo -e "${RED}❌ Homebrew not found — run 'mise run brew' first${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}📦 Installing Homebrew packages from Brewfile...${NC}"
+
+bundle_args=(--file="$SCRIPT_DIR/Brewfile")
+if [[ "${usage_upgrade:-}" != "true" ]]; then
+    bundle_args+=(--no-upgrade)
+fi
+
+if brew bundle install "${bundle_args[@]}"; then
+    echo -e "${GREEN}✅ Homebrew packages installed${NC}"
+else
+    echo -e "${RED}⚠️  Some Homebrew packages failed to install — see output above${NC}"
+fi

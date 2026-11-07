@@ -1,0 +1,54 @@
+#!/bin/bash
+#MISE description="Install Homebrew (Intel or Apple Silicon) and update it"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+if ! command_exists brew; then
+    echo -e "${YELLOW}📦 Installing Homebrew...${NC}"
+    echo -e "${BLUE}   This may take a few minutes...${NC}"
+
+    # Install Homebrew
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || {
+        echo -e "${RED}❌ Homebrew installation failed${NC}"
+        echo -e "${YELLOW}   Please install Homebrew manually:${NC}"
+        echo -e "${YELLOW}   /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"${NC}"
+        exit 1
+    }
+
+    # Detect architecture and add Homebrew to PATH
+    if [[ -f "/opt/homebrew/bin/brew" ]]; then
+        # Apple Silicon Mac
+        echo -e "${BLUE}   Adding Homebrew to PATH for Apple Silicon...${NC}"
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        # Add to shell profile for persistence
+        if ! grep -q "/opt/homebrew/bin" "$HOME/.zprofile" 2>/dev/null; then
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
+        fi
+    elif [[ -f "/usr/local/bin/brew" ]]; then
+        # Intel Mac
+        echo -e "${BLUE}   Adding Homebrew to PATH for Intel Mac...${NC}"
+        eval "$(/usr/local/bin/brew shellenv)"
+        # Add to shell profile for persistence
+        if ! grep -q "/usr/local/bin" "$HOME/.zprofile" 2>/dev/null; then
+            echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zprofile"
+        fi
+    fi
+
+    # Verify installation
+    if command_exists brew; then
+        echo -e "${GREEN}✅ Homebrew installed successfully${NC}"
+        brew --version
+    else
+        echo -e "${RED}❌ Homebrew installation completed but brew command not found${NC}"
+        echo -e "${YELLOW}   Please restart your terminal and run this script again${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ Homebrew already installed${NC}"
+    brew --version
+fi
+
+# Update Homebrew
+echo -e "${YELLOW}🔄 Updating Homebrew...${NC}"
+brew update || echo -e "${YELLOW}⚠️  Homebrew update failed (this is usually okay)${NC}"

@@ -1,0 +1,49 @@
+#!/bin/bash
+#MISE description="Install ~/.zshrc, ~/.zsh/*.zsh and Neovim config"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+install_zsh_configuration() {
+    echo -e "${BOLD}${BLUE}📁 Installing Zsh Configuration Files...${NC}"
+    echo ""
+
+    # Create .zsh directory if it doesn't exist
+    echo -e "${YELLOW}📁 Creating ~/.zsh directory...${NC}"
+    mkdir -p "$HOME_DIR/.zsh"
+
+    # Copy zsh configuration files
+    if [ -d "$SCRIPT_DIR/.zsh" ] && [ "$(ls -A "$SCRIPT_DIR/.zsh" 2>/dev/null)" ]; then
+        echo -e "${YELLOW}📋 Copying zsh configuration files...${NC}"
+        cp -r "$SCRIPT_DIR/.zsh/"* "$HOME_DIR/.zsh/"
+        echo -e "${GREEN}✅ Zsh configuration files copied${NC}"
+    else
+        echo -e "${RED}⚠️  Warning: .zsh directory not found or empty in $SCRIPT_DIR${NC}"
+        echo -e "${YELLOW}   Skipping zsh configuration file copy${NC}"
+    fi
+
+    # Backup existing .zshrc if it exists
+    if [ -f "$HOME_DIR/.zshrc" ]; then
+        echo -e "${YELLOW}💾 Backing up existing .zshrc to .zshrc.backup...${NC}"
+        cp "$HOME_DIR/.zshrc" "$HOME_DIR/.zshrc.backup"
+    fi
+
+    # Copy .zshrc
+    echo -e "${YELLOW}📝 Installing .zshrc...${NC}"
+    cp "$SCRIPT_DIR/.zshrc" "$HOME_DIR/.zshrc"
+    echo -e "${GREEN}✅ .zshrc installed${NC}"
+
+    # Copy neovim configuration
+    if [ -d "$SCRIPT_DIR/.config/nvim" ]; then
+        echo -e "${YELLOW}📝 Installing Neovim configuration...${NC}"
+        mkdir -p "$HOME_DIR/.config/nvim"
+        cp -r "$SCRIPT_DIR/.config/nvim/"* "$HOME_DIR/.config/nvim/"
+        echo -e "${GREEN}✅ Neovim configuration installed${NC}"
+    fi
+
+    echo ""
+    echo -e "${GREEN}✅ Zsh configuration installed successfully!${NC}"
+    echo ""
+}
+
+install_zsh_configuration

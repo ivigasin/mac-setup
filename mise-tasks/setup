@@ -1,0 +1,350 @@
+#!/bin/bash
+#MISE description="Full Mac setup: Homebrew, packages, zsh, runtimes, Git, Claude Code"
+#MISE raw=true
+#USAGE flag "--non-interactive" help="Run in non-interactive mode (no prompts)"
+#USAGE flag "--skip-zsh" help="Skip zsh configuration installation"
+#USAGE flag "--skip-deps" help="Skip dependency installation"
+#USAGE flag "--install-node" help="No-op, kept for compatibility (Node.js LTS is always installed by mise)"
+#USAGE flag "--skip-tests" help="Skip running tests"
+
+# Mac Setup - Orchestrator
+# Collects options (interactive or via env vars) and runs each setup step as a mise task.
+#
+# Copyright © 2025 Igor Vigasin
+# Created by Igor Vigasin
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+# Installation flags
+INTERACTIVE_MODE=true
+INSTALL_ZSH_CONFIG=true
+INSTALL_DEPENDENCIES=true
+RUN_TESTS=true
+
+[[ "${usage_non_interactive:-}" == "true" ]] && INTERACTIVE_MODE=false
+[[ "${usage_skip_zsh:-}" == "true" ]] && INSTALL_ZSH_CONFIG=false
+[[ "${usage_skip_deps:-}" == "true" ]] && INSTALL_DEPENDENCIES=false
+[[ "${usage_skip_tests:-}" == "true" ]] && RUN_TESTS=false
+
+# Git configuration variables
+GIT_NAME=""
+GIT_EMAIL=""
+GIT_SIGNING_KEY=""
+
+# =============================================================================
+# DISPLAY FUNCTIONS
+# =============================================================================
+
+show_banner() {
+    clear
+    echo -e "${BLUE}${BOLD}"
+    echo "╔═══════════════════════════════════════════════════════════╗"
+    echo "║                                                           ║"
+    echo "║           🚀 Mac Setup - All-in-One                       ║"
+    echo "║                                                           ║"
+    echo "║     Automated Mac CLI Setup & Configuration               ║"
+    echo "║                                                           ║"
+    echo "╚═══════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
+}
+
+show_installation_summary() {
+    local install_zsh="$1"
+    local install_deps="$2"
+
+    echo ""
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${BLUE}What Will Be Installed & Enabled${NC}"
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+
+    if [[ "$install_zsh" == "true" ]] || [[ "$install_zsh" == "y" ]]; then
+        echo -e "${CYAN}📁 Zsh Configuration Files:${NC}"
+        echo -e "  ${GREEN}✓${NC} ~/.zshrc (main configuration file)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/config.zsh (Oh My Zsh config)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/exports.zsh (environment variables)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/aliases.zsh (command aliases)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/functions.zsh (custom functions)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/history.zsh (history settings)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/options.zsh (zsh options)"
+        echo -e "  ${GREEN}✓${NC} ~/.zsh/tools.zsh (tool configurations, mise activation)"
+        echo ""
+    fi
+
+    if [[ "$install_deps" == "true" ]] || [[ "$install_deps" == "y" ]]; then
+        echo -e "${CYAN}📦 Package Managers:${NC}"
+        echo -e "  ${GREEN}✓${NC} mise (runs this setup, manages language runtimes)"
+        echo -e "  ${GREEN}✓${NC} Homebrew (if not installed) + Brewfile"
+        echo ""
+
+        echo -e "${CYAN}🎨 Shell Framework:${NC}"
+        echo -e "  ${GREEN}✓${NC} Oh My Zsh"
+        echo ""
+
+        echo -e "${CYAN}🔌 Zsh Plugins:${NC}"
+        echo -e "  ${GREEN}✓${NC} zsh-autosuggestions (command suggestions)"
+        echo -e "  ${GREEN}✓${NC} zsh-syntax-highlighting (syntax highlighting)"
+        echo -e "  ${GREEN}✓${NC} zsh-history-substring-search (history search)"
+        echo -e "  ${GREEN}✓${NC} git (Git aliases and functions)"
+        echo -e "  ${GREEN}✓${NC} fzf (fuzzy finder integration)"
+        echo ""
+
+        echo -e "${CYAN}🔤 Fonts:${NC}"
+        echo -e "  ${GREEN}✓${NC} MesloLGS NF (required for Agnoster theme)"
+        echo -e "  ${GREEN}✓${NC} Hack Nerd Font"
+        echo ""
+
+        echo -e "${CYAN}🖥️  Terminal Emulators:${NC}"
+        echo -e "  ${GREEN}✓${NC} Ghostty (installed + Nerd Font + iTerm2-style keybindings)"
+        echo ""
+
+        echo -e "${CYAN}📝 Editors:${NC}"
+        echo -e "  ${GREEN}✓${NC} Visual Studio Code (app + 'code' command-line tool)"
+        echo ""
+
+        echo -e "${CYAN}🛠️  CLI Tools (via Homebrew):${NC}"
+        echo -e "  ${GREEN}✓${NC} eza (modern ls replacement)"
+        echo -e "  ${GREEN}✓${NC} bat (modern cat replacement)"
+        echo -e "  ${GREEN}✓${NC} ripgrep (rg - fast grep)"
+        echo -e "  ${GREEN}✓${NC} fzf (fuzzy finder)"
+        echo -e "  ${GREEN}✓${NC} zoxide (smart cd)"
+        echo -e "  ${GREEN}✓${NC} fd (fast find)"
+        echo -e "  ${GREEN}✓${NC} neovim (modern vim editor)"
+        echo -e "  ${GREEN}✓${NC} mc (Midnight Commander file manager)"
+        echo -e "  ${GREEN}✓${NC} gnupg (GPG for commit signing)"
+        echo -e "  ${GREEN}✓${NC} pinentry-mac (GPG passphrase prompts)"
+        echo -e "  ${GREEN}✓${NC} gh (GitHub CLI)"
+        echo -e "  ${GREEN}✓${NC} git-secrets (prevent committing secrets)"
+        echo -e "  ${GREEN}✓${NC} uv + pipx (Python tooling)"
+        echo ""
+
+        echo -e "${CYAN}💻 Language Runtimes (via mise):${NC}"
+        echo -e "  ${GREEN}✓${NC} Node.js LTS"
+        echo -e "  ${GREEN}✓${NC} Python 3.11"
+        echo -e "  ${GREEN}✓${NC} Go (latest)"
+        echo -e "  ${GREEN}✓${NC} Java (Temurin 21)"
+        echo -e "  ${GREEN}✓${NC} Claude Code CLI (install + browser auth)"
+        echo ""
+
+        echo -e "${CYAN}⚙️  Git Configuration:${NC}"
+        echo -e "  ${GREEN}✓${NC} Default branch: main"
+        echo -e "  ${GREEN}✓${NC} Pull strategy: rebase"
+        echo -e "  ${GREEN}✓${NC} GPG signing: enabled"
+        echo -e "  ${GREEN}✓${NC} Color output: configured"
+        echo -e "  ${GREEN}✓${NC} Credential helper: macOS Keychain"
+        echo -e "  ${GREEN}✓${NC} Git aliases: st, ci, co, br, df, dc, lg, lp, lol, lola, grog, etc."
+        echo ""
+
+        echo -e "${CYAN}🔧 Tool Configurations:${NC}"
+        echo -e "  ${GREEN}✓${NC} FZF setup and key bindings"
+        echo -e "  ${GREEN}✓${NC} zoxide initialization"
+        echo ""
+    fi
+
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+}
+
+# =============================================================================
+# INTERACTIVE WIZARD FUNCTIONS
+# =============================================================================
+
+collect_user_info() {
+    echo -e "${BOLD}${BLUE}Step 1: User Information${NC}"
+    echo -e "${BLUE}─────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    # Check if git is already configured
+    if command -v git &> /dev/null; then
+        EXISTING_GIT_NAME=$(git config --global user.name 2>/dev/null || echo "")
+        EXISTING_GIT_EMAIL=$(git config --global user.email 2>/dev/null || echo "")
+        EXISTING_SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || echo "")
+
+        if [ -n "$EXISTING_GIT_NAME" ]; then
+            prompt_with_default "Git user name" "$EXISTING_GIT_NAME" "GIT_NAME"
+        else
+            prompt_with_default "Git user name" "" "GIT_NAME"
+        fi
+
+        if [ -n "$EXISTING_GIT_EMAIL" ]; then
+            prompt_with_default "Git user email" "$EXISTING_GIT_EMAIL" "GIT_EMAIL"
+        else
+            prompt_with_default "Git user email" "" "GIT_EMAIL"
+        fi
+
+        if [ -n "$EXISTING_SIGNING_KEY" ]; then
+            prompt_with_default "GPG signing key" "$EXISTING_SIGNING_KEY" "GIT_SIGNING_KEY"
+        else
+            prompt_with_default "GPG signing key (or press Enter to skip)" "1CF7369F7EEAAF61" "GIT_SIGNING_KEY"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Git is not installed. You can configure it later.${NC}"
+        prompt_with_default "Git user name (optional)" "" "GIT_NAME"
+        prompt_with_default "Git user email (optional)" "" "GIT_EMAIL"
+        prompt_with_default "GPG signing key (optional)" "1CF7369F7EEAAF61" "GIT_SIGNING_KEY"
+    fi
+}
+
+collect_installation_options() {
+    echo ""
+    echo -e "${BOLD}${BLUE}Step 2: Installation Options${NC}"
+    echo -e "${BLUE}─────────────────────────────────────────────────────${NC}"
+    echo ""
+
+    prompt_yes_no "Install zsh configuration files?" "y" "INSTALL_ZSH_CONFIG"
+    prompt_yes_no "Install all dependencies (Homebrew, tools, runtimes, etc.)?" "y" "INSTALL_DEPENDENCIES"
+    prompt_yes_no "Run tests after installation?" "y" "RUN_TESTS"
+}
+
+show_setup_summary() {
+    echo ""
+    echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${GREEN}Setup Summary${NC}"
+    echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${CYAN}Git Configuration:${NC}"
+    if [ -n "$GIT_NAME" ]; then
+        echo -e "  ${GREEN}✓${NC} Name: $GIT_NAME"
+    else
+        echo -e "  ${YELLOW}○${NC} Name: (not set)"
+    fi
+    if [ -n "$GIT_EMAIL" ]; then
+        echo -e "  ${GREEN}✓${NC} Email: $GIT_EMAIL"
+    else
+        echo -e "  ${YELLOW}○${NC} Email: (not set)"
+    fi
+    if [ -n "$GIT_SIGNING_KEY" ]; then
+        echo -e "  ${GREEN}✓${NC} GPG Key: $GIT_SIGNING_KEY"
+    else
+        echo -e "  ${YELLOW}○${NC} GPG Key: (not set)"
+    fi
+    echo ""
+    echo -e "${CYAN}Installation Steps:${NC}"
+    if [[ "$INSTALL_ZSH_CONFIG" == "y" ]]; then
+        echo -e "  ${GREEN}✓${NC} Install zsh configuration"
+    else
+        echo -e "  ${RED}✗${NC} Skip zsh configuration"
+    fi
+    if [[ "$INSTALL_DEPENDENCIES" == "y" ]]; then
+        echo -e "  ${GREEN}✓${NC} Install dependencies"
+    else
+        echo -e "  ${RED}✗${NC} Skip dependencies"
+    fi
+    if [[ "$RUN_TESTS" == "y" ]]; then
+        echo -e "  ${GREEN}✓${NC} Run tests"
+    else
+        echo -e "  ${RED}✗${NC} Skip tests"
+    fi
+    echo ""
+}
+
+# =============================================================================
+# MAIN EXECUTION FLOW
+# =============================================================================
+
+is_enabled() {
+    [[ "$1" == "y" ]] || [[ "$1" == "true" ]]
+}
+
+# Run one setup step as its own mise task
+run_step() {
+    local title="$1"
+    local task="$2"
+
+    echo -e "${BOLD}${BLUE}${title}${NC}"
+    echo ""
+    mise run --quiet "$task"
+    echo ""
+}
+
+main() {
+    # Check if running on macOS
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        echo -e "${RED}❌ Error: This script is designed for macOS only.${NC}"
+        exit 1
+    fi
+
+    # Show banner if interactive
+    if [ "$INTERACTIVE_MODE" = true ]; then
+        show_banner
+    else
+        echo -e "${BLUE}🚀 Mac Setup - Running in non-interactive mode${NC}"
+        echo ""
+    fi
+
+    # Collect user information in interactive mode
+    if [ "$INTERACTIVE_MODE" = true ]; then
+        collect_user_info
+        collect_installation_options
+        show_installation_summary "$INSTALL_ZSH_CONFIG" "$INSTALL_DEPENDENCIES"
+        show_setup_summary
+
+        # Confirmation
+        prompt_yes_no "Proceed with installation?" "y" "CONFIRM"
+
+        if [[ "$CONFIRM" != "y" ]]; then
+            echo -e "${YELLOW}Installation cancelled.${NC}"
+            exit 0
+        fi
+    else
+        # Use environment variables in non-interactive mode
+        GIT_NAME="${GIT_USER_NAME:-}"
+        GIT_EMAIL="${GIT_USER_EMAIL:-}"
+        GIT_SIGNING_KEY="${GIT_USER_SIGNING_KEY:-}"
+
+        show_installation_summary "$INSTALL_ZSH_CONFIG" "$INSTALL_DEPENDENCIES"
+    fi
+
+    # Hand collected values to the step tasks
+    export INTERACTIVE_MODE GIT_NAME GIT_EMAIL GIT_SIGNING_KEY
+
+    echo ""
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${BLUE}Starting Installation...${NC}"
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+
+    # Install shell framework first so our config overwrites it
+    if is_enabled "$INSTALL_DEPENDENCIES"; then
+        run_step "Step 1: Installing Homebrew" brew
+        run_step "Step 2: Installing Oh My Zsh and plugins" omz
+    fi
+
+    # Install zsh configuration (after Oh My Zsh so our .zshrc wins)
+    if is_enabled "$INSTALL_ZSH_CONFIG"; then
+        run_step "Step 3: Installing Zsh Configuration" zsh-config
+    fi
+
+    if is_enabled "$INSTALL_DEPENDENCIES"; then
+        run_step "Step 4: Installing Homebrew Packages (Brewfile)" brew-bundle
+        run_step "Step 5: Installing Ghostty configuration" ghostty
+        run_step "Step 6: Checking Visual Studio Code CLI" vscode-cli
+        run_step "Step 7: Installing Language Runtimes (mise)" runtimes
+        run_step "Step 8: Setting up FZF" fzf
+        run_step "Step 9: Installing Claude Code CLI" claude
+        run_step "Step 10: Configuring Git" git
+    fi
+
+    # Optional: Run tests
+    if is_enabled "$RUN_TESTS"; then
+        run_step "Running Tests..." test
+    fi
+
+    # Final summary
+    echo ""
+    echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${GREEN}🎉 Installation Complete!${NC}"
+    echo -e "${BOLD}${GREEN}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${CYAN}Next steps:${NC}"
+    echo -e "  1. Open a new Ghostty window (or run ${YELLOW}exec zsh${NC}) to load the new configuration"
+    echo -e "  2. Runtimes are managed by mise: ${YELLOW}mise ls${NC}, ${YELLOW}mise use node@22${NC}"
+    echo -e "  3. Re-run a single step any time: ${YELLOW}mise run <step>${NC} (see ${YELLOW}mise tasks ls${NC})"
+    echo ""
+    echo -e "${GREEN}Happy coding! 🚀${NC}"
+    echo ""
+}
+
+main

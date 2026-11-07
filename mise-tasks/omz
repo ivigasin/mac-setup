@@ -1,0 +1,53 @@
+#!/bin/bash
+#MISE description="Install Oh My Zsh and zsh plugins"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+install_oh_my_zsh() {
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+        echo -e "${YELLOW}📦 Installing Oh My Zsh...${NC}"
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+        echo -e "${GREEN}✅ Oh My Zsh installed${NC}"
+    else
+        echo -e "${GREEN}✅ Oh My Zsh already installed${NC}"
+    fi
+}
+
+install_zsh_plugins() {
+    echo -e "${YELLOW}🔌 Installing Oh My Zsh plugins...${NC}"
+
+    local plugins_dir="$HOME/.oh-my-zsh/custom/plugins"
+
+    # zsh-autosuggestions
+    if [ ! -d "$plugins_dir/zsh-autosuggestions" ]; then
+        echo "  Installing zsh-autosuggestions..."
+        git clone https://github.com/zsh-users/zsh-autosuggestions "$plugins_dir/zsh-autosuggestions"
+    else
+        echo -e "  ${GREEN}✅ zsh-autosuggestions already installed, updating...${NC}"
+        git -C "$plugins_dir/zsh-autosuggestions" pull --quiet || true
+    fi
+
+    # zsh-syntax-highlighting
+    if [ ! -d "$plugins_dir/zsh-syntax-highlighting" ]; then
+        echo "  Installing zsh-syntax-highlighting..."
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$plugins_dir/zsh-syntax-highlighting"
+    else
+        echo -e "  ${GREEN}✅ zsh-syntax-highlighting already installed, updating...${NC}"
+        git -C "$plugins_dir/zsh-syntax-highlighting" pull --quiet || true
+    fi
+
+    # history-substring-search
+    if [ ! -d "$plugins_dir/zsh-history-substring-search" ]; then
+        echo "  Installing history-substring-search..."
+        git clone https://github.com/zsh-users/zsh-history-substring-search "$plugins_dir/zsh-history-substring-search"
+    else
+        echo -e "  ${GREEN}✅ history-substring-search already installed, updating...${NC}"
+        git -C "$plugins_dir/zsh-history-substring-search" pull --quiet || true
+    fi
+
+    echo -e "${GREEN}✅ Zsh plugins installed${NC}"
+}
+
+install_oh_my_zsh
+install_zsh_plugins

@@ -1,0 +1,13 @@
+# Global mise configuration — installed to ~/.config/mise/config.toml by `mise run runtimes`
+# Language runtimes used everywhere; per-project versions come from mise.toml,
+# .nvmrc, .node-version or .python-version in the project directory.
+
+[tools]
+node = "lts"
+python = "3.11"
+go = "latest"
+java = "temurin-21"
+
+[settings]
+# Honor existing .nvmrc / .node-version / .python-version files
+idiomatic_version_file_enable_tools = ["node", "python"]

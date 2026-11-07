@@ -1,0 +1,28 @@
+#!/bin/bash
+#MISE description="Install language runtimes (node, python, go, java) with mise"
+
+set -e
+source "$MISE_PROJECT_ROOT/lib/common.sh"
+
+echo -e "${YELLOW}🧰 Installing language runtimes with mise...${NC}"
+
+# Global runtime versions
+install_config_file "$SCRIPT_DIR/.config/mise/config.toml" "$HOME_DIR/.config/mise/config.toml"
+echo -e "  ${GREEN}✅ mise global config installed to ~/.config/mise/config.toml${NC}"
+
+# Shims for non-interactive shells (IDEs, GUI apps); interactive zsh uses `mise activate` in tools.zsh
+mise_bin="$(command -v mise)"
+if ! grep -q "mise activate zsh --shims" "$HOME/.zprofile" 2>/dev/null; then
+    echo "" >> "$HOME/.zprofile"
+    echo "# mise shims for non-interactive shells" >> "$HOME/.zprofile"
+    echo "eval \"\$($mise_bin activate zsh --shims)\"" >> "$HOME/.zprofile"
+    echo -e "  ${GREEN}✅ Added mise shims to ~/.zprofile${NC}"
+fi
+
+# Run from $HOME so only the global config is in scope
+if (cd "$HOME" && mise install --yes); then
+    echo -e "${GREEN}✅ Runtimes installed:${NC}"
+    (cd "$HOME" && mise ls --current)
+else
+    echo -e "${RED}⚠️  Some runtimes failed to install — run 'mise install' to retry${NC}"
+fi

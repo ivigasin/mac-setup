@@ -172,25 +172,29 @@ if command_exists brew; then
     run_test "Homebrew in PATH" false bash -c "echo \"\$PATH\" | grep -q \"$BREW_PREFIX\""
 fi
 
-run_test "NVM directory exists" false dir_exists "$HOME/.nvm"
+run_test "mise installed" false bash -c "command -v mise >/dev/null 2>&1 || [ -x \"\$HOME/.local/bin/mise\" ]"
+run_test "mise global config installed" false file_exists "$HOME/.config/mise/config.toml"
+run_test "mise activated in tools.zsh" true grep_file 'mise activate zsh' "$HOME/.zsh/tools.zsh"
+run_test "exports.zsh no longer loads nvm" true bash -c "! grep -q 'nvm.sh' \"$HOME/.zsh/exports.zsh\""
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null
-run_test "Node.js available"  false command_exists node
-run_test "npm available"      false command_exists npm
-
-run_test "Go installed"       false command_exists go
-run_test "Python 3 installed" false command_exists python3
+# Runtimes resolve through mise's global config (run from $HOME to ignore project configs)
+MISE_BIN="$(command -v mise 2>/dev/null || echo "$HOME/.local/bin/mise")"
+mise_runtime() {
+    local path
+    path=$(cd "$HOME" && "$MISE_BIN" which "$1" 2>&1) || { echo "$path"; return 1; }
+    [[ "$path" == *"/mise/installs/"* ]] || { echo "$path is not managed by mise"; return 1; }
+}
+run_test "Node.js managed by mise" false mise_runtime node
+run_test "npm managed by mise"     false mise_runtime npm
+run_test "Go managed by mise"      false mise_runtime go
+run_test "Python managed by mise"  false mise_runtime python
 run_test "Python >= 3.11" false bash -c "
-    for py in python3.11 python3.12 python3.13 /opt/homebrew/bin/python3 python3; do
-        if command -v \"\$py\" >/dev/null 2>&1; then
-            \"\$py\" -c 'import sys; exit(0 if sys.version_info >= (3,11) else 1)' && exit 0
-        fi
-    done
-    exit 1
+    py=\$(cd \"\$HOME\" && \"$MISE_BIN\" which python 2>/dev/null) || py=python3
+    \"\$py\" -c 'import sys; exit(0 if sys.version_info >= (3,11) else 1)'
 "
+run_test "Java managed by mise"    false mise_runtime java
+run_test "uv installed"   false command_exists uv
 run_test "pipx installed" false command_exists pipx
-run_test "Java installed"  false bash -c "command -v java >/dev/null 2>&1 || [ -d /opt/homebrew/opt/openjdk ] || [ -d /usr/local/opt/openjdk ]"
 
 # ---------------------------------------------------------------------------
 echo ""
